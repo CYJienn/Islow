@@ -1,8 +1,8 @@
 /* Kaunter: a dotted-canvas widget dashboard. Plain JS, no build, works from file:// on any device.
    Reads window.KAUNTER_DATA (written by WorkBuddy) and window.I18N. Layout + language live in localStorage. */
-/* Auto-redirect: if opened from file://, hop to the bridge server so /api/chat works. */
+/* Auto-redirect: the FastAPI server hosts both the UI and API. */
 if (location.protocol === 'file:') {
-  try { location.replace('http://localhost:3120' + location.hash); } catch (e) { /* stay put */ }
+  try { location.replace('http://localhost:8000' + location.hash); } catch (e) { /* stay put */ }
 }
 (function () {
   'use strict';
@@ -403,7 +403,7 @@ if (location.protocol === 'file:') {
     var raw = text.replace(/^\/create\s*/i, '').replace(/^```(?:json)?\s*|\s*```$/gi, '').trim();
     if (!raw) return t('chat.create.help');
     /* Only attempt JSON parse if it looks like JSON; natural-language descriptions
-       need the bridge server (which is apparently not running right now). */
+       need the FastAPI server (which is apparently not running right now). */
     if (raw.charAt(0) !== '{' && raw.charAt(0) !== '[') {
       return t('chat.bridge.desc');
     }
@@ -879,11 +879,11 @@ if (location.protocol === 'file:') {
     toast(t('toast.layout', { n: t('layout.' + n) }));
   });
 
-  /* ---------- chat (WorkBuddy bridge) ----------
-     The chat sends messages to the local bridge server (POST /api/chat).
-     For /create <description>: the bridge generates a widget JSON spec and we call Kaunter.create(spec).
-     For /create <JSON>: the bridge validates and returns the spec.
-     For regular chat: the bridge returns a helpful response.
+  /* ---------- chat (FastAPI backend) ----------
+     The chat sends messages to POST /api/v1/chat.
+     For /create <description>: the API generates a widget JSON spec and we call Kaunter.create(spec).
+     For /create <JSON>: the API validates and returns the spec.
+     For regular chat: the API returns a helpful response.
      If the server is not running, we fall back to local /create JSON parsing. */
   var chatLog = $('#chatLog'), chatIn = $('#chatIn'), chatHist = [];
   function chatAdd(who, text, isTyping) {
@@ -945,7 +945,7 @@ if (location.protocol === 'file:') {
     var th = thinking();
     th.step(t('chat.think.read'));
     th.step(t('chat.think.ask'));
-    fetch('/api/chat', {
+    fetch('/api/v1/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: text })
@@ -966,12 +966,12 @@ if (location.protocol === 'file:') {
       if (window.Buddy) window.Buddy.react('reply');
     }).catch(function() {
       th.settle();
-      /* Fallback: if bridge is not running, handle /create locally (raw JSON only) */
+      /* Fallback: if the API is not running, handle /create locally (raw JSON only) */
       if (/^\/create(\s|$)/i.test(text)) {
         var reply = chatCreate(text);
         chatAdd('bot', reply);
-        /* If the reply is a bridge-needed message, don't double-up with another bridge hint */
-        if (reply.indexOf('bridge server') === -1 && reply.indexOf('Could not create') > -1) {
+        /* Avoid adding a second server hint when the local fallback already supplied one. */
+        if (reply.indexOf('server') === -1 && reply.indexOf('Could not create') > -1) {
           chatAdd('bot', t('chat.bridge.down'));
         }
       } else {

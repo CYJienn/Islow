@@ -96,7 +96,7 @@ Add a `pipeline` field to show **how WorkBuddy built this widget** as a clickabl
 - One job per widget. Lead with the number that matters (`sum` first), then 3-6 rows at most. Money looks like `RM 1,240`.
 - Use `late: true` only for something actually overdue. Never use colour as the only signal; put the word in `pill`.
 - `size` should fit the content: about 1 row per 2 blocks, 3 to 5 rows tall, 4 wide.
-- Source of truth for tokens is `frontend/style.css` (`:root`). `design/DESIGN.md` still lists an older dark-blue palette; ignore its colours.
+- Source of truth for tokens is `frontend/style.css` (`:root`). `docs/design/DESIGN.md` still lists an older dark-blue palette; ignore its colours.
 
 ## Sync paths
 

@@ -1,0 +1,25 @@
+[project]
+name = "kaunter-api"
+version = "0.1.0"
+description = "FastAPI backend for Kaunter"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi[standard]>=0.118,<1.0",
+    "langchain[mcp,openai]>=1.4,<2.0",
+    "langgraph>=1.2,<2.0",
+    "langsmith>=0.4,<1.0",
+    "pydantic-settings>=2.11,<3.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28,<1.0",
+    "pytest>=8.4,<9.0",
+]
+
+[tool.fastapi]
+entrypoint = "app.main:app"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

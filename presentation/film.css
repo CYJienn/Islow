@@ -1,6 +1,6 @@
 /* Kaunter showcase film: 1920x1080 stage, everything positioned absolutely, every animation is driven by engine.js */
-@font-face { font-family: 'Atk'; font-weight: 700; src: url('../dashboard/fonts/atkinson-700.woff2') format('woff2'); }
-@font-face { font-family: 'Atk'; font-weight: 400; src: url('../dashboard/fonts/atkinson-400.woff2') format('woff2'); }
+@font-face { font-family: 'Atk'; font-weight: 700; src: url('../frontend/fonts/atkinson-700.woff2') format('woff2'); }
+@font-face { font-family: 'Atk'; font-weight: 400; src: url('../frontend/fonts/atkinson-400.woff2') format('woff2'); }
 :root {
   --ground: #061744; --canvas: #0a2468; --card: #0e2f82; --ink: #eaf1ff; --ink-2: #b4c6f1;
   --green: #28b894; --green-2: #009273; --blue: #0052d9; --blue-2: #4f8bff; --sky: #8fbaff; --alert: #f2994a; --on-green: #04163c;

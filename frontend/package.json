@@ -1,11 +1,14 @@
 {
-  "name": "kaunter-bridge",
-  "version": "1.0.0",
-  "description": "Local bridge server connecting Kaunter chat to a widget-generation agent",
-  "main": "bridge.js",
+  "name": "kaunter-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "start": "node bridge.js",
-    "dev": "node bridge.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "dependencies": {}
+  "devDependencies": {
+    "vite": "^7.1.9"
+  }
 }
