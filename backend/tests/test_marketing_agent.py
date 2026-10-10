@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from marketing_agent import sentiment
@@ -16,6 +17,14 @@ from marketing_agent.config import Settings
 
 
 FIXTURES = Path(__file__).parents[1] / "marketing_agent" / "fixtures"
+
+
+@pytest.fixture(autouse=True)
+def use_local_sentiment_for_existing_offline_tests(monkeypatch):
+    monkeypatch.setenv("SENTIMENT_MODEL_SOURCE", "local")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def request():

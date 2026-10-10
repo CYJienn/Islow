@@ -3,6 +3,7 @@
 window.I18N = {
   en: {
     'app.name': 'Kaunter',
+    'nav.marketing': 'Marketing Lab',
     'bar.updated': 'Updated {t} by WorkBuddy',
     'bar.demo': 'Demo data',
     'mode.view': 'Viewing',
@@ -153,6 +154,7 @@ window.I18N = {
   },
 
   ms: {
+    'nav.marketing': 'Makmal Pemasaran',
     'app.name': 'Kaunter',
     'bar.updated': 'Dikemas kini {t} oleh WorkBuddy',
     'bar.demo': 'Data contoh',
