@@ -10,13 +10,13 @@ def generate(request: AnalyzeRequest, sentiment: SentimentReport, findings: list
         path = Path(__file__).parent / "fixtures" / "demo_campaigns.json"
         drafts = [DraftCampaign.model_validate(x) for x in json.loads(path.read_text(encoding="utf-8"))]
         return drafts, "fixture", 0, ["Campaign drafts are illustrative demo fixtures, not LLM-generated output."], None
-    if not (settings.google_api_key and settings.gemini_model):
-        return [], "unavailable", 0, ["GOOGLE_API_KEY or GEMINI_MODEL missing; live strategy unavailable."], None
+    if not (settings.openai_api_key and settings.openai_model):
+        return [], "unavailable", 0, ["OPENAI_API_KEY or OPENAI_MODEL missing; live strategy unavailable."], None
     try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        llm = ChatGoogleGenerativeAI(model=settings.gemini_model, api_key=settings.google_api_key,
-                                    timeout=settings.llm_timeout_seconds, max_output_tokens=2200,
-                                    max_retries=0, temperature=0)
+        from langchain_openai import ChatOpenAI
+        llm = ChatOpenAI(model=settings.openai_model, api_key=settings.openai_api_key,
+                         timeout=settings.llm_timeout_seconds, max_tokens=2200,
+                         max_retries=0)
     except Exception as exc:
         return [], "unavailable", 0, [f"LLM initialization failed: {type(exc).__name__}."], None
     context = {"business": request.business.model_dump(),
@@ -29,7 +29,8 @@ def generate(request: AnalyzeRequest, sentiment: SentimentReport, findings: list
     for attempt in range(2):
         calls += 1
         try:
-            response = llm.invoke(prompt)
+            from app.core import usage
+            response = llm.invoke(prompt, config=usage.config())
             content = str(response.content).strip().removeprefix("```json").removesuffix("```").strip()
             data = json.loads(content)
             if isinstance(data, dict):

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { owner, reminders, upcoming, widgets } from "@/lib/data";
+import ProfileDialog, { KEY as PROFILE_KEY, emptyProfile, loadProfile, chatBody, type Profile } from "./ProfileDialog";
 
 function List({ title, items }: { title: string; items: string[] }) {
   return (
@@ -64,10 +65,15 @@ type Rect = { x: number; y: number; w: number; h: number };
 type Box = Rect & { id: string };
 type Drag = { kind: "move" | "resize" | "add"; id: string; px: number; py: number; off: { x: number; y: number }; target: Box | null };
 
-const KEY = "kaunter-layout-v2";
+const KEY = "kaunter-layout-v3";
 const COLS = 12, DEF = { w: 3, h: 2 }, MIN = { w: 2, h: 1 };
 const byId = Object.fromEntries(widgets.map((w) => [w.title, w]));
-const initial: Box[] = widgets.map((w, i) => ({ id: w.title, x: (i % 4) * 3, y: Math.floor(i / 4) * 2, ...DEF }));
+// Default layout (12 columns): x, y, w, h in grid cells.
+const START: Record<string, [number, number, number, number]> = {
+  "Sales this week": [0, 0, 3, 2], "To-do": [3, 0, 3, 2], "Spend": [6, 0, 3, 2], "Cold room": [9, 0, 3, 2],
+  "Stock alert": [0, 2, 5, 2], "Next event": [5, 2, 3, 4], "Invoices": [0, 4, 3, 2], "Customers": [8, 4, 3, 2],
+};
+const initial: Box[] = widgets.map((w) => { const [x, y, ww, h] = START[w.title]; return { id: w.title, x, y, w: ww, h }; });
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const overlap = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -95,7 +101,41 @@ const glow = (e: React.PointerEvent<HTMLElement>) => {
   e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
 };
 
-export default function Dashboard() {
+type Msg = { from: "me" | "bot"; text: string };
+
+export default function Dashboard({ onCouncil }: { onCouncil: (question: string, answer: string, turns: { agent: string; text: string }[]) => void }) {
+  const [profile, setProfile] = useState<Profile>(emptyProfile);
+  const [profileOpen, setProfileOpen] = useState(false);
+  useEffect(() => setProfile(loadProfile()), []);
+  const saveProfile = (p: Profile) => {
+    setProfile(p); setProfileOpen(false);
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch {}
+  };
+  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const msgsEnd = useRef<HTMLDivElement>(null);
+  useEffect(() => { msgsEnd.current?.scrollIntoView({ block: "end" }); }, [msgs, busy]);
+
+  // Chat answers directly; if the manager had to pull in several specialists, open the round table instead.
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = draft.trim();
+    if (!text || busy) return;
+    const say = (from: Msg["from"], t: string) => setMsgs((m) => [...m, { from, text: t }]);
+    setDraft(""); say("me", text); setBusy(true);
+    try {
+      const r = await fetch("/api/v1/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(chatBody(profile, text)) });
+      const d = await r.json().catch(() => null);
+      if (!r.ok || !d) say("bot", `The assistant returned an error (${r.status}).`);
+      else if (d.type === "text" && d.council) { say("bot", "This needs the whole team. Calling the round table…"); onCouncil(text, d.message, d.turns ?? []); }
+      else say("bot", d.message || "No answer.");
+    } catch {
+      say("bot", "I can't reach the assistant. Start the backend: cd backend, then uv run python run.py.");
+    } finally { setBusy(false); }
+  };
+
+
   const [layout, setLayout] = useState<Box[]>(initial);
   const [edit, setEdit] = useState(false);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -192,6 +232,7 @@ export default function Dashboard() {
       <div className="col">
       <div className="bar">
         {edit && <button className="btn" onClick={() => setLayout(initial)}>Reset</button>}
+        <button className="btn" onClick={() => setProfileOpen(true)}>Edit profile</button>
         <button className={`btn ${edit ? "on" : ""}`} onClick={() => setEdit(!edit)}>{edit ? "Done" : "Customise"}</button>
       </div>
       <main className="stage">
@@ -240,13 +281,21 @@ export default function Dashboard() {
         <List title="Reminder" items={reminders} />
         <List title="Upcoming" items={upcoming} />
         <div className="chat">
-          <h2>Hi {owner}, how can we help you?</h2>
-          <form className="pill glow" onPointerMove={glow} onSubmit={(e) => e.preventDefault()}>
-            <input placeholder="Ask your team anything" aria-label="Message" />
-            <button aria-label="Send">↑</button>
+          {msgs.length > 0 && (
+            <div className="msgs" aria-live="polite">
+              {msgs.map((m, i) => <p key={i} className={m.from}>{m.text}</p>)}
+              {busy && <p className="bot thinking">Thinking…</p>}
+              <div ref={msgsEnd} />
+            </div>
+          )}
+          <h2>Hi {profile.owner || owner}, how can we help you?</h2>
+          <form className="pill glow" onPointerMove={glow} onSubmit={send}>
+            <input placeholder="Ask your team anything" aria-label="Message" value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <button aria-label="Send" disabled={busy}>↑</button>
           </form>
         </div>
       </aside>
+      <ProfileDialog open={profileOpen} profile={profile} onSave={saveProfile} onClose={() => setProfileOpen(false)} />
     </>
   );
 }

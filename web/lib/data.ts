@@ -5,6 +5,7 @@ export const agents: Agent[] = [
   { id: "manager", name: "Manager", role: "Runs the team", shape: "circle", next: "Standup, today 20:00" },
   { id: "marketing", name: "Marketing lead", role: "Promos & posts", shape: "triangle", next: "Weekend promo post, tomorrow 09:00" },
   { id: "finance", name: "Finance and Ops lead", role: "Cash, stock, invoices", shape: "square", next: "Supplier payment run, today 17:00" },
+  { id: "legal", name: "Legal Team lead", role: "Contracts & compliance", shape: "square", next: "Supplier contract review, tomorrow 11:00" },
   { id: "assistant", name: "Personal Assist.", role: "Your day, sorted", shape: "ring", next: "Bank appointment prep, tomorrow 08:30" },
 ];
 
@@ -33,6 +34,8 @@ export const script: Turn[] = [
   { from: "manager", to: "marketing", act: "point", text: "Marketing, can a weekend promo cover the gap?" },
   { from: "marketing", to: "finance", act: "throw", text: "Yes, the draft is ready. Finance, what budget cap do I get?" },
   { from: "finance", to: "marketing", act: "point", text: "RM 300 maximum, and only on the flour and oil bundles." },
+  { from: "manager", to: "legal", act: "point", text: "Legal, is the supplier contract safe to sign before we commit the promo budget?" },
+  { from: "legal", to: "manager", act: "throw", text: "One clause needs changing: 90-day payment terms. I will send a redline today." },
   { from: "assistant", to: "manager", act: "stand", text: "Noted. I will put the freezer decision on Kai's list for 20:00." },
 ];
 
