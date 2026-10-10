@@ -1,5 +1,7 @@
 # Kaunter backend
 
+Once dependencies are installed, Windows users can run `START.cmd` from this folder to start the backend using its local Python environment. This does not require `uv` on PATH. Open http://127.0.0.1:8000/docs and stop the server with Ctrl+C.
+
 One Python 3.11 FastAPI server exposes the existing Kaunter routes and the Marketing Agent. Dependencies are declared in `pyproject.toml`, locked in `uv.lock`, and exported with exact versions in the single `requirements.txt`. Both parts read the same `backend/.env`.
 
 ## Setup (Windows PowerShell)

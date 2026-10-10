@@ -12,17 +12,41 @@ const byId = (id: string) => agents.find((a) => a.id === id)!;
 
 const WALK_MS = 2200;
 export type ApiTurn = { agent: string; text: string };
-const short = (t: string) => (t.length > 180 ? t.slice(0, 177).trimEnd() + "…" : t);
+const SPEECH_MS = 2000;
+const plainSpeech = (text: string) => text
+  .replace(/\*\*|__/g, "")
+  .replace(/`/g, "")
+  .replace(/^#{1,6}\s+/gm, "");
+function speechChunks(text: string): string[] {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const chunks: string[] = [];
+  let chunk = "";
+  for (const word of words) {
+    if (chunk && (chunk.length + word.length + 1 > 180 || (chunk.length >= 100 && /[.!?]$/.test(chunk)))) {
+      chunks.push(chunk);
+      chunk = "";
+    }
+    chunk = chunk ? `${chunk} ${word}` : word;
+  }
+  if (chunk) chunks.push(chunk);
+  return chunks.length ? chunks : [""];
+}
 
 // Manager opens, each specialist reports back, manager closes. These are the backend's real answers.
 function toPlan(q: string, turns: ApiTurn[]): Turn[] {
   const first = turns.find((t) => t.agent !== "manager")?.agent ?? "manager";
-  return [
-    { from: "manager", to: first, act: "point", text: `Team, the question is: ${q}` },
-    ...turns.map((t): Turn => t.agent === "manager"
-      ? { from: "manager", to: first, act: "stand", text: t.text }
-      : { from: t.agent, to: "manager", act: "throw", text: t.text }),
-  ];
+  const plan: Turn[] = [{ from: "manager", to: first, act: "point", text: `Team, the question is: ${q}` }];
+  turns.forEach((t, index) => {
+    if (t.agent === "manager") {
+      const next = turns.slice(index + 1).find(next => next.agent !== "manager")?.agent ?? first;
+      plan.push({ from: "manager", to: next, act: "stand", text: t.text });
+    } else {
+      if (index === 0 || turns[index - 1].agent !== "manager")
+        plan.push({ from: "manager", to: t.agent, act: "point", text: `${byId(t.agent).name}, you are next.` });
+      plan.push({ from: t.agent, to: "manager", act: "throw", text: t.text });
+    }
+  });
+  return plan;
 }
 
 // Top-down 2D sofa: backrest, two arms, two cushions. Drawn once facing down, then rotated per side.
@@ -70,24 +94,33 @@ function Walker({ id, dx }: { id: string; dx: number }) {
   );
 }
 
-// Pixel thought box (animated dots), then a pixel speech box that types the line out.
+// Replace each complete speech chunk while the same character keeps speaking.
 function Bubble({ text, side, listen }: { text: string; side: "l" | "r"; listen?: boolean }) {
-  const [thinking, setThinking] = useState(true);
-  const [n, setN] = useState(0);
-  useEffect(() => { const t = setTimeout(() => setThinking(false), 900); return () => clearTimeout(t); }, []);
+  const [visibleChars, setVisibleChars] = useState(0);
   useEffect(() => {
-    if (thinking) return;
-    const i = setInterval(() => setN((v) => Math.min(v + 1, text.length)), 28);
-    return () => clearInterval(i);
-  }, [thinking, text]);
-  return thinking || listen
+    setVisibleChars(0);
+    if (listen) return;
+    const started = performance.now();
+    // Reveal the whole chunk within the existing two-second speech interval.
+    const typingMs = 1200;
+    let frame: number;
+    const reveal = () => {
+      const progress = Math.min(1, (performance.now() - started) / typingMs);
+      setVisibleChars(Math.ceil(progress * text.length));
+      if (progress < 1) frame = requestAnimationFrame(reveal);
+    };
+    frame = requestAnimationFrame(reveal);
+    return () => cancelAnimationFrame(frame);
+  }, [text, listen]);
+  return listen
     ? <div className={`pbox think ${side}`}><i /><i /><i /></div>
-    : <div className={`pbox say ${side}`}>{text.slice(0, n)}</div>;
+    : <div className={`pbox say ${side}`}>{text.slice(0, visibleChars)}</div>;
 }
 
 export default function Meeting({ council }: { council?: { question: string; answer: string; turns?: ApiTurn[] } | null }) {
   const [seats, setSeats] = useState<(string | null)[]>(council ? agents.map((a) => a.id) : SEATS.map(() => null));
   const [turn, setTurn] = useState(-1);
+  const [speechPart, setSpeechPart] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [topic, setTopic] = useState("");
   const [custom, setCustom] = useState("");
@@ -114,22 +147,34 @@ export default function Meeting({ council }: { council?: { question: string; ans
   const elapsed = `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
 
   const seated = seats.filter(Boolean) as string[];
-  const plan = (live ?? script).filter((t) => seated.includes(t.from) && seated.includes(t.to));
+  const plan = (live ?? script)
+    .filter((t) => seated.includes(t.from) && seated.includes(t.to))
+    .map(t => ({ ...t, text: plainSpeech(t.text) }));
   const seatOf = (id: string) => SEATS[seats.indexOf(id)];
   const cur = playing && turn >= 0 ? plan[turn] : undefined;
+  const chunks = speechChunks(cur?.text ?? "");
 
   // any change at the table restarts the conversation
   useEffect(() => { setPlaying(false); setTurn(-1); }, [seats]);
 
   useEffect(() => {
     if (!playing) return;
-    const t = setInterval(() => setTurn((n) => {
-      if (n + 1 >= plan.length) { setPlaying(false); return n; }
-      return n + 1;
-    }), 3400);
-    return () => clearInterval(t);
+    const t = setTimeout(() => {
+      if (speechPart + 1 < chunks.length) {
+        setSpeechPart(n => n + 1);
+      } else {
+        setSpeechPart(0);
+        setTurn(n => {
+          if (n + 1 >= plan.length) { setPlaying(false); return n; }
+          return n + 1;
+        });
+      }
+    }, SPEECH_MS);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, plan.length]);
+  }, [playing, turn, speechPart, chunks.length, plan.length]);
+
+  useEffect(() => { setSpeechPart(0); }, [turn, seats]);
 
   useEffect(() => { logRef.current?.scrollTo({ top: 1e6, behavior: "smooth" }); }, [turn]);
 
@@ -162,7 +207,7 @@ export default function Meeting({ council }: { council?: { question: string; ans
       `- **At the table:** ${seated.map((id) => byId(id).name).join(", ")}`,
       "", "## Discussion", "",
       ...plan.slice(0, turn + 1).map((t) => `- **${byId(t.from).name} → ${byId(t.to).name}:** ${t.text}`),
-      ...(council && !live ? ["", "## Manager's answer", "", council.answer] : []),
+      ...(council && !live ? ["", "## Manager's answer", "", plainSpeech(council.answer)] : []),
       "",
     ];
     const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/markdown" }));
@@ -277,7 +322,7 @@ export default function Meeting({ council }: { council?: { question: string; ans
                     <Walker key={`${a.id}-${i}`} id={a.id} dx={((p.x < 50 ? -8 : p.x > 50 ? 108 : -8) - p.x) * (roomRef.current?.clientWidth ?? 800) / 100} />
                     <b>{a.name}</b>
                     <button className="x" aria-label={`Remove ${a.name}`} onClick={(e) => { e.stopPropagation(); setSeats((s) => s.map((v, j) => (j === i ? null : v))); }}>×</button>
-                    {standing && cur && <Bubble key={turn} text={short(cur.text)} side={p.x > 50 ? "l" : "r"} />}
+                    {standing && cur && <Bubble key={turn} text={chunks[speechPart] ?? chunks[0]} side={p.x > 50 ? "l" : "r"} />}
                     {target && <Bubble key={`t${turn}`} text="" listen side={p.x > 50 ? "l" : "r"} />}
                   </>
                 ) : <span className="empty"><i>+</i>Drop here</span>}
@@ -291,7 +336,7 @@ export default function Meeting({ council }: { council?: { question: string; ans
         {!playing && turn < 0 && <p className="hint">{seated.length < 2 ? "Seat at least two agents, then press Start talking." : "Press Start talking."}</p>}
         {topic && turn >= 0 && <p className="topic"><b>Question</b> {topic}</p>}
         {note && <p className="hint">{note}</p>}
-        {council && !live && !playing && turn >= 0 && <p className="topic answer"><b>Manager</b> {council.answer}</p>}
+        {council && !live && !playing && turn >= 0 && <p className="topic answer"><b>Manager</b> {plainSpeech(council.answer)}</p>}
         {plan.slice(0, turn + 1).map((t, i) => (
           <p key={i} className={i === turn && playing ? "now" : ""}>
             <b>{byId(t.from).name}</b> <span className="arrow">→ {byId(t.to).name}</span> {t.text}
