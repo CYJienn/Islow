@@ -1,4 +1,5 @@
-import Avatar from "./Avatar";
+import Buddy from "./Buddy";
+import ThemeToggle from "./ThemeToggle";
 import { agents } from "@/lib/data";
 
 type View = "dash" | "table";
@@ -25,11 +26,12 @@ export default function Rail({ view, onView }: { view: View; onView: (v: View) =
             onClick={() => onView("table")}
             title={`${a.name}: drag onto the table`}
           >
-            <Avatar shape={a.shape} />
+            <Buddy id={a.id} size={44} />
             {open && <span>{a.name}</span>}
           </button>
         ))}
       </nav>
+      <ThemeToggle />
     </aside>
   );
 }
