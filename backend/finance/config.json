@@ -1,0 +1,25 @@
+{
+  "workbook": "C:\\Users\\chuay\\OneDrive\\InvoiceAssurance\\Input\\finance_enterprise_export.xlsx",
+  "reference_documents": [
+    "inputs/All CSVs are now covered (2).docx",
+    "inputs/invoice_assurance_orchestrator_v1-export (4).json"
+  ],
+  "include_test_cases": false,
+  "reviewer": "Finance & Operations Lead",
+  "timezone": "Asia/Kuala_Lumpur",
+  "schedule_enabled": false,
+  "notification_flow": "telegram_only",
+  "email_alert_on_success": false,
+  "test_policy": {
+    "currency": "MYR",
+    "money_tolerance": "0.02",
+    "quantity_tolerance": "0"
+  },
+  "invoice_input_dir": "C:\\Users\\chuay\\OneDrive\\InvoiceAssurance\\Invoices",
+  "email_alert_on_risk": false,
+  "email_alert_on_approval": false,
+  "outlook_enabled": false,
+  "document_dataset_kind": "TEST",
+  "telegram_review_enabled": true,
+  "telegram_attach_report": true
+}
