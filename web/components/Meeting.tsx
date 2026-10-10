@@ -95,6 +95,7 @@ export default function Meeting({ council }: { council?: { question: string; ans
   const [live, setLive] = useState<Turn[] | null>(null); // the manager's real turns; null = play the demo script
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
+  const initialFinanceReport = useRef(financeReportPayload().finance?.report);
   const logRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false); // a character is being dragged: light up the free sofas
@@ -177,7 +178,7 @@ export default function Meeting({ council }: { council?: { question: string; ans
   // Put the topic to the manager (POST /api/v1/chat). If the backend is down, play the demo script instead.
   const start = async (q: string) => {
     setTopic(q); setCustom(""); setTurn(-1); setStarted(new Date()); setEnded(null); setNote(""); setBusy(true);
-    let turns: ApiTurn[] | undefined = council && council.question === q && !financeReportPayload().finance ? council.turns : undefined;
+    let turns: ApiTurn[] | undefined = council && council.question === q && initialFinanceReport.current === financeReportPayload().finance?.report ? council.turns : undefined;
     if (!turns?.length) {
       try {
         const r = await fetch("/api/v1/chat", {
