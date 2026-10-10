@@ -4,3 +4,4 @@ import './buddy.js';
 import './jelly.js';
 import './pipeline.js';
 import './app.js';
+import './finance.js';

@@ -92,8 +92,6 @@ uv export --format requirements-txt --dev --no-hashes --output-file requirements
 ```
 
 The marketing pipeline lives in `marketing_agent/`; the existing Kaunter application lives in `app/`. No campaigns are published or funded by this service.
-python -m pip install -r requirements.txt
-```
 
 Copy `.env.example` to `.env` and set `GOOGLE_API_KEY` there before invoking an agent. Do not commit `.env`. LangSmith tracing is disabled by default and can be enabled through the variables documented in `.env.example`.
 

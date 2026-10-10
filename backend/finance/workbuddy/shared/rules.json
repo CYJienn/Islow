@@ -1,0 +1,21 @@
+{
+  "INTAKE.IDENTITY": {"domain": "intake", "description": "Stable business identity must be present and unique within the supplied batch."},
+  "INTAKE.REQUIRED": {"domain": "intake", "description": "Vendor ID and invoice number are required invoice header fields."},
+  "INTAKE.AMOUNT": {"domain": "intake", "description": "Invoice amount must be an explicit finite Decimal-compatible number."},
+  "INTAKE.CURRENCY": {"domain": "intake", "description": "Invoice currency must be an explicit uppercase three-letter code; this is not an ISO registry lookup."},
+  "INTAKE.DATE": {"domain": "intake", "description": "Invoice date must be an explicit valid ISO date or ISO datetime."},
+  "MATCH.LINE_LINK": {"domain": "matching", "description": "Each sourced invoice line requires an exact invoice/PO/PO-line link, quantity, price, UOM and currency; the PO line must be unique."},
+  "MATCH.PRICE": {"domain": "matching", "description": "Compare Decimal unit prices only in comparable units and currencies. Supplied batches need explicit sourced production_price_tolerance. Only SYNTHETIC_DEMO MYR permits configured demo_myr_rounding_allowance of exactly 0.02."},
+  "MATCH.QUANTITY": {"domain": "matching", "description": "Aggregate billed quantity per invoice and PO line against dated net receipts less other invoices' prior allocations, with zero quantity tolerance. Sourced policy must attest allocations_complete and returns_complete as true."},
+  "MATCH.BATCH_CAPACITY": {"domain": "matching", "description": "Evaluate dated competing batch demand without inventing allocations. Overcapacity is FAIL with INFERRED_CANDIDATE evidence, not an allocation decision."},
+  "MATCH.TAX": {"domain": "matching", "description": "Require explicit invoice tax_code, tax_rate, tax_amount and net_amount and a unique company/currency/code tax rule with tax_rate and inclusive effective_from/effective_to. Rates are fractions; arithmetic is exact with no inferred rounding."},
+  "MATCH.FX": {"domain": "matching", "description": "Foreign-currency line prices require unique sourced fx_rates with from_currency, to_currency, rate and rate_date matching invoice_date. No inverse or fallback rate is inferred."},
+  "FRAUD.DUPLICATE": {"domain": "fraud", "description": "Exact vendor/invoice-number/currency/company duplicates with different invoice IDs are duplicate records, not proven fraud. Negative results cover only the supplied batch."},
+  "FRAUD.SIMILAR": {"domain": "fraud", "description": "Same vendor, Decimal amount, currency and date across different invoice IDs is an inferred review candidate, not confirmed fraud or an inferred PO link."},
+  "FRAUD.BANK_MATCH": {"domain": "fraud", "description": "Present vendor/invoice bank_account discrepancies are risk signals. Equality can PASS only with independent verification. Findings never contain raw bank values."},
+  "FRAUD.BANK_VERIFICATION": {"domain": "fraud", "description": "Require a unique vendor bank verification with verified=true, independent=true and a source_ref distinct from invoice and vendor source references."},
+  "ACCOUNTING.GL": {"domain": "accounting", "description": "Require a unique gl_account/company_code master record with explicit active=true."},
+  "ACCOUNTING.APPROVAL": {"domain": "accounting", "description": "Require a unique actual invoice approval_decision and exact approver/currency/company authority effective on decision_date. APPROVED passes only at or below inclusive max_amount; REJECTED fails. Authority alone never proves approval."},
+  "ACCOUNTING.TAX": {"domain": "accounting", "description": "Use only supplied dated company/currency/tax-code rules and explicit invoice tax_rate, tax_amount and net_amount. Rates are fractions and calculations are exact."},
+  "ACCOUNTING.FX": {"domain": "accounting", "description": "Require explicit accounting_currency; same currency is NOT_APPLICABLE. Otherwise compare explicit accounting_amount with amount times a unique sourced direct rate dated invoice_date. No invented converted amounts or rounding."}
+}
