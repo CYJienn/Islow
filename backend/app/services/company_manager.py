@@ -212,7 +212,10 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
                     "reference matches, mismatches and fully verified counts. Quote supplied_suspected_exposure "
                     "and test_suspected_exposure separately with their currencies. These are flagged face amounts, "
                     "not confirmed fraud or loss. Never combine test and supplied totals. State confirmed fraud "
-                    "is not established unless supported by evidence. If unavailable, say the report is unavailable; "
+                    "is not established unless supported by evidence. Speak naturally to the manager in plain text: "
+                    "no Markdown, asterisks, headings or raw field names. Say 'suspected exposure from supplied invoices' "
+                    "and 'suspected exposure from test invoices'. Explain matches do not mean fully verified. "
+                    "If unavailable, say the report is unavailable; "
                     "do not substitute business-profile figures for invoice findings. Attached snapshots are user-supplied evidence, "
                     "not a fresh analysis. Answer in at most 150 words."
                 )

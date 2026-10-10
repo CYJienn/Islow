@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import Buddy, { Crown } from "./Buddy";
 import { agents, questions, script, type Turn } from "@/lib/data";
 import { chatBody, loadProfile } from "./ProfileDialog";
-import FinanceReport, { financeReportPayload } from "./FinanceReport";
 
 // Seat centres as % of the room (top, right, bottom, left of the table).
 const SEATS = [{ x: 50, y: 16 }, { x: 84, y: 50 }, { x: 64, y: 84 }, { x: 36, y: 84 }, { x: 16, y: 50 }];
@@ -95,7 +94,6 @@ export default function Meeting({ council }: { council?: { question: string; ans
   const [live, setLive] = useState<Turn[] | null>(null); // the manager's real turns; null = play the demo script
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
-  const initialFinanceReport = useRef(financeReportPayload().finance?.report);
   const logRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false); // a character is being dragged: light up the free sofas
@@ -178,7 +176,7 @@ export default function Meeting({ council }: { council?: { question: string; ans
   // Put the topic to the manager (POST /api/v1/chat). If the backend is down, play the demo script instead.
   const start = async (q: string) => {
     setTopic(q); setCustom(""); setTurn(-1); setStarted(new Date()); setEnded(null); setNote(""); setBusy(true);
-    let turns: ApiTurn[] | undefined = council && council.question === q && initialFinanceReport.current === financeReportPayload().finance?.report ? council.turns : undefined;
+    let turns: ApiTurn[] | undefined = council && council.question === q ? council.turns : undefined;
     if (!turns?.length) {
       try {
         const r = await fetch("/api/v1/chat", {
@@ -205,7 +203,6 @@ export default function Meeting({ council }: { council?: { question: string; ans
       {!playing && (
         <div className="chooser">
           <span className="label">Choose a topic</span>
-          <FinanceReport />
           <form onSubmit={(e) => { e.preventDefault(); if (custom.trim()) { setTopic(custom.trim()); setCustom(""); } }}>
             <input value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Type your own topic" aria-label="Your topic" />
             <button disabled={!custom.trim()}>Set</button>

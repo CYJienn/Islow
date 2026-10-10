@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     finance_workbook: str = ""
     finance_invoice_input_dir: str = ""
+    finance_report_json: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:

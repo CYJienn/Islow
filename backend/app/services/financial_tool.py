@@ -51,6 +51,24 @@ def _analyze(mode: str) -> dict:
 
     config = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
     settings = get_settings()
+    # Use the Python processor's newest saved result before attempting a new analysis.
+    reports = sorted((ROOT / "state" / "reports").glob("*/report.json"),
+                     key=lambda path: path.stat().st_mtime, reverse=True)
+    snapshot = None
+    origin = ""
+    if reports:
+        snapshot = json.loads(reports[0].read_text(encoding="utf-8"))
+        origin = "Latest locally generated invoice report"
+    elif settings.finance_report_json:
+        snapshot = json.loads(settings.finance_report_json)
+        origin = "Configured hosted invoice report snapshot; not a fresh analysis"
+    if snapshot is not None:
+        if not isinstance(snapshot.get("batch_results"), dict) or not snapshot.get("report_id"):
+            raise ValueError("Generated invoice report is missing its identity or results")
+        return {"report_id": snapshot["report_id"], "status": "partial", "mode": mode,
+                "batch_results": snapshot["batch_results"], "evidence_origin": origin,
+                "warnings": [origin, "Suspected exposure is not confirmed fraud or loss."],
+                "distribution_approval_required": True, "external_actions": "none"}
 
     def resolved(value: str) -> Path:
         path = Path(value).expanduser()
