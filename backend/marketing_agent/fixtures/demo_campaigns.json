@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Campus Pickup Window", "objective": "Increase local awareness and trial", "target_audience": "University students",
+    "channel": "Instagram", "idea": "Post a seven-day pickup window offer and ask customers to reserve a coffee through the cafe's existing ordering channel.",
+    "sample_caption": "Short break between classes? Reserve your coffee for pickup today.", "duration_days": 7,
+    "estimated_budget_rm": 150, "kpi": "Tracked pickup reservations", "evidence_ids": ["competitor-001"],
+    "assumptions": ["Cafe can accept reservations"], "customer_alignment": 4, "differentiation": 3, "feasibility": 4,
+    "customer_alignment_reason": "Students may value predictable pickup.", "differentiation_reason": "Pickup is a modest point of difference.", "feasibility_reason": "Uses an existing channel and limited promotion."
+  },
+  {
+    "name": "Pastry Pairing Reel", "objective": "Showcase coffee and pastries", "target_audience": "University students",
+    "channel": "TikTok", "idea": "Film three short clips showing affordable coffee and pastry pairings with a clear visit invitation.",
+    "sample_caption": "Pick your study break pairing and visit us this week.", "duration_days": 10,
+    "estimated_budget_rm": 100, "kpi": "In-store redemptions of a named pairing", "evidence_ids": ["competitor-001"],
+    "assumptions": ["Staff can record short videos"], "customer_alignment": 4, "differentiation": 3, "feasibility": 5,
+    "customer_alignment_reason": "Pairings fit student breaks.", "differentiation_reason": "Content can highlight the cafe's own menu.", "feasibility_reason": "Small production scope."
+  },
+  {
+    "name": "Study Break Story Poll", "objective": "Learn preferred visit times", "target_audience": "University students",
+    "channel": "Instagram", "idea": "Run story polls on preferred coffee break times, then publish one timetable post based on responses.",
+    "sample_caption": "When is your coffee break? Vote in our story and stop by this week.", "duration_days": 5,
+    "estimated_budget_rm": 50, "kpi": "Poll responses", "evidence_ids": [],
+    "assumptions": ["Cafe has an active Instagram account"], "customer_alignment": 3, "differentiation": 2, "feasibility": 5,
+    "customer_alignment_reason": "The poll targets student schedules.", "differentiation_reason": "Polls are common but can inform timing.", "feasibility_reason": "Requires little spend."
+  }
+]

@@ -3,7 +3,13 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
+backend/.venv-marketing/
 backend/.env
+.env
+marketing_agent/models/
+backend/ml/model/growthlab-sentiment-yelp-tuned/
+backend/ml/model/growthlab-sentiment-amazon-adapted/
+backend/.local-checks/
 
 # JavaScript and generated presentation media
 node_modules/

@@ -1,0 +1,14 @@
+{
+  "task_id": "demo-001",
+  "business": {
+    "name": "GrowthCafe", "industry": "cafe", "location": "Subang Jaya, Malaysia",
+    "products": ["coffee", "pastries"], "target_customers": "university students",
+    "marketing_budget_rm": 500, "objective": "increase local awareness",
+    "channels": ["Instagram", "TikTok"], "competitor_names": []
+  },
+  "reviews": [
+    {"text": "Good coffee but waiting time is long", "language": "en", "source": "demo_csv", "date": "2026-09-15"},
+    {"text": "Affordable and friendly service", "language": "en", "source": "demo_csv", "date": "2026-09-16"}
+  ],
+  "research_mode": "demo"
+}
