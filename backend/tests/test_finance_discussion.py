@@ -40,3 +40,31 @@ def test_finance_lead_receives_report_before_speaking(attached):
 def test_report_requires_identifiable_batch_results():
     with pytest.raises(ValueError):
         ChatRequest(text="Discuss", finance={"report": {"total": "123"}})
+
+
+def test_generated_report_changes_are_read_without_frontend_upload(tmp_path):
+    from types import SimpleNamespace
+    from app.services import financial_tool
+    (tmp_path / "config.json").write_text("{}")
+    directory = tmp_path / "state" / "reports" / "report-generated"
+    directory.mkdir(parents=True)
+    path = directory / "report.json"
+    for amount in ("12.00", "27.00"):
+        path.write_text(json.dumps({"report_id": "report-generated", "batch_results": {
+            "supplied_suspected_exposure": {"MYR": amount}, "test_suspected_exposure": {}}}))
+        with patch.object(financial_tool, "ROOT", tmp_path), \
+             patch.object(financial_tool, "get_settings", return_value=SimpleNamespace(finance_report_json="")):
+            result = financial_tool._analyze("configured")
+        assert result["batch_results"]["supplied_suspected_exposure"]["MYR"] == amount
+
+
+def test_hosted_report_comes_from_configuration(tmp_path):
+    from types import SimpleNamespace
+    from app.services import financial_tool
+    (tmp_path / "config.json").write_text("{}")
+    snapshot = {"report_id": "report-hosted", "batch_results": {"checked": 7}}
+    with patch.object(financial_tool, "ROOT", tmp_path), \
+         patch.object(financial_tool, "get_settings", return_value=SimpleNamespace(finance_report_json=json.dumps(snapshot))):
+        result = financial_tool._analyze("configured")
+    assert result["report_id"] == "report-hosted"
+    assert result["batch_results"]["checked"] == 7
