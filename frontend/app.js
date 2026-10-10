@@ -1,5 +1,9 @@
 /* Kaunter: a dotted-canvas widget dashboard. Plain JS, no build, works from file:// on any device.
    Reads window.KAUNTER_DATA (written by WorkBuddy) and window.I18N. Layout + language live in localStorage. */
+/* Auto-redirect: if opened from file://, hop to the bridge server so /api/chat works. */
+if (location.protocol === 'file:') {
+  try { location.replace('http://localhost:3120' + location.hash); } catch (e) { /* stay put */ }
+}
 (function () {
   'use strict';
 
@@ -52,19 +56,19 @@
   var srcTag = function (k) { var i = { photo: 'i-photo', pdf: 'i-pdf', chat: 'i-chat', meeting: 'i-meet', note: 'i-note' }[k] || 'i-note'; return '<span class="src">' + ic(i) + esc(t('src.' + k)) + '</span>'; };
 
   /* ---------- modules ---------- */
-  var S = { mode: 'view', layout: null, name: 'starter', dirty: false, cols: 12, cell: 88, bp: 'wide', done: store.get('kaunter.done') || {} };
+  var S = { view: 'board', mode: 'view', layout: null, name: 'starter', dirty: false, cols: 12, cell: 88, bp: 'wide', done: store.get('kaunter.done') || {} };
   var todoDone = function (it) { return it.id in S.done ? S.done[it.id] : it.done; };
 
   var MODS = [
-    { id: 'cal', ic: 'i-cal', g: ['#6fa3ff', '#0052d9'], def: [4, 5], min: [2, 1], render: rCal, mini: mCal },
-    { id: 'rem', ic: 'i-rem', g: ['#6fd8ff', '#1b8fe0'], def: [4, 3], min: [2, 1], render: rRem, mini: mRem },
-    { id: 'todo', ic: 'i-todo', g: ['#4fe0b8', '#009273'], def: [4, 4], min: [2, 1], render: rTodo, mini: mTodo },
-    { id: 'sales', ic: 'i-sales', g: ['#3fd9c8', '#00857a'], def: [4, 4], min: [2, 1], render: rSales, mini: mSales },
-    { id: 'spend', ic: 'i-spend', g: ['#97a8ff', '#4152d8'], def: [4, 4], min: [2, 1], render: rSpend, mini: mSpend },
-    { id: 'meet', ic: 'i-meet', g: ['#b69aff', '#6a46e0'], def: [4, 4], min: [2, 1], render: rMeet, mini: mMeet },
-    { id: 'owe', ic: 'i-owe', g: ['#d7e0f5', '#7d8fba'], gi: '#04163c', def: [4, 4], min: [2, 1], render: rOwe, mini: mOwe },
-    { id: 'pack', ic: 'i-pack', g: ['#a6efd8', '#2aa58a'], gi: '#04163c', def: [4, 3], min: [2, 1], render: rPack, mini: mPack },
-    { id: 'time', ic: 'i-time', g: ['#eaf1ff', '#9db4e8'], gi: '#04163c', def: [4, 2], min: [2, 1], render: rTime, mini: mTime }
+    { id: 'cal', ic: 'i-cal', g: ['#5eead4', '#0d9488'], gi: '#04201c', def: [4, 5], min: [2, 1], render: rCal, mini: mCal },
+    { id: 'rem', ic: 'i-rem', g: ['#cbd5e1', '#64748b'], gi: '#0f172a', def: [4, 3], min: [2, 1], render: rRem, mini: mRem },
+    { id: 'todo', ic: 'i-todo', g: ['#2dd4bf', '#0f766e'], def: [4, 4], min: [2, 1], render: rTodo, mini: mTodo },
+    { id: 'sales', ic: 'i-sales', g: ['#99f6e4', '#14b8a6'], gi: '#04201c', def: [4, 4], min: [2, 1], render: rSales, mini: mSales },
+    { id: 'spend', ic: 'i-spend', g: ['#94a3b8', '#475569'], def: [4, 4], min: [2, 1], render: rSpend, mini: mSpend },
+    { id: 'meet', ic: 'i-meet', g: ['#a9b6c6', '#5b6b7f'], def: [4, 4], min: [2, 1], render: rMeet, mini: mMeet },
+    { id: 'owe', ic: 'i-owe', g: ['#e2e8f0', '#94a3b8'], gi: '#0f172a', def: [4, 4], min: [2, 1], render: rOwe, mini: mOwe },
+    { id: 'pack', ic: 'i-pack', g: ['#7dd3c8', '#2a9d8f'], gi: '#04201c', def: [4, 3], min: [2, 1], render: rPack, mini: mPack },
+    { id: 'time', ic: 'i-time', g: ['#475569', '#1f2937'], def: [4, 2], min: [2, 1], render: rTime, mini: mTime }
   ];
   var MOD = {};
   MODS.forEach(function (m) { MOD[m.id] = m; });
@@ -237,6 +241,174 @@
   var ORDER = { starter: ['time', 'rem', 'owe', 'todo', 'cal', 'sales', 'spend', 'meet'], shop: ['sales', 'spend', 'owe', 'todo', 'rem', 'pack'], founder: ['time', 'meet', 'todo', 'cal', 'owe', 'rem'] };
   var CH = { time: 2, cal: 7, todo: 5, rem: 4, sales: 4, spend: 5, meet: 6, owe: 5, pack: 4 };
   var hOf = function (id) { return S.bp === 'compact' ? CH[id] : MOD[id].def[1]; };
+
+  /* ---------- custom widgets: "/create {spec}" in the chat, or D.widgets in data.js. Spec format: skills/kaunter-create/SKILL.md ----------
+     Specs are data, never HTML: every string goes through esc() and every block type is drawn with the built-in classes, so any LLM's output looks native and cannot inject script. */
+  var BUILTIN = Object.keys(MOD);
+  var CUSTOM_KEY = 'kaunter.custom.v1';
+  var str = function (v, n) { return String(v == null ? '' : v).slice(0, n || 120); };
+  var pct = function (v) { return clamp(Number(v) || 0, 0, 100); };
+  var CC = ['#14b8a6', '#64748b', '#5eead4', '#94a3b8', '#0a7f72', '#cbd5e1', '#7dd3c8', '#5b6b7f', '#475569', '#1f2937'];
+  var BLOCK = {
+    sum: function (b) { return '<p class="sum">' + (b.bold ? '<b>' + esc(str(b.bold)) + '</b> ' : '') + esc(str(b.text)) + '</p>'; },
+    text: function (b) { return '<p class="small muted">' + esc(str(b.text, 400)) + '</p>'; },
+    group: function (b) { return '<div class="grp"><span>' + esc(str(b.label)) + '</span><b class="amt">' + esc(str(b.value)) + '</b></div>'; },
+    row: function (b) {
+      var s = (b.sub ? esc(str(b.sub)) : '') + (b.pill ? '<span class="pill' + (b.late ? ' late' : '') + '">' + esc(str(b.pill, 40)) + '</span>' : '');
+      return '<div class="row"><div class="row-main"><div class="row-t">' + esc(str(b.title)) + '</div>' + (s ? '<div class="row-s">' + s + '</div>' : '') + '</div>' +
+        (b.value != null ? '<span class="amt">' + esc(str(b.value, 30)) + '</span>' : '') + '</div>';
+    },
+    meter: function (b) { return (b.label ? '<p class="sum">' + esc(str(b.label)) + '</p>' : '') + '<div class="meter"><i style="width:' + pct(b.value) + '%"></i></div>'; },
+    bars: function (b) {
+      var it = (b.items || []).slice(0, 12), max = Math.max.apply(null, it.map(function (i) { return Number(i.value) || 0; }).concat(1));
+      return '<div class="chart">' + it.map(function (i, n) {
+        return '<div class="col' + (n === it.length - 1 ? ' now' : '') + '"><span class="v">' + esc(str(i.value, 8)) + '</span><div class="track"><i style="--p:' + Math.round((Number(i.value) || 0) / max * 100) + '"></i></div><span>' + esc(str(i.label, 8)) + '</span></div>';
+      }).join('') + '</div>';
+    },
+    /* line chart: items: [{label, value}] */
+    line: function (b) {
+      var it = (b.items || []).slice(0, 20);
+      if (!it.length) return '';
+      var vals = it.map(function (i) { return Number(i.value) || 0; });
+      var max = Math.max.apply(null, vals.concat(1)), min = Math.min.apply(null, vals.concat(0)), range = (max - min) || 1;
+      var W = 200, H = 80, pad = 6;
+      var step = it.length > 1 ? (W - pad * 2) / (it.length - 1) : 0;
+      var pts = it.map(function (i, n) {
+        var x = pad + n * step, y = H - pad - ((Number(i.value) || 0) - min) / range * (H - pad * 2);
+        return [x.toFixed(1), y.toFixed(1)];
+      });
+      var poly = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
+      var area = pad + ',' + (H - pad) + ' ' + poly + ' ' + pts[pts.length - 1][0] + ',' + (H - pad);
+      var dots = pts.map(function (p) { return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="2.2" />'; }).join('');
+      var skip = Math.ceil(it.length / 6), labels = it.map(function (i, n) { return n % skip === 0 ? '<span>' + esc(str(i.label, 6)) + '</span>' : '<span></span>'; }).join('');
+      return '<div class="chart-line"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none"><polygon class="line-area" points="' + area + '" /><polyline class="line-stroke" points="' + poly + '" />' + dots + '</svg><div class="lbls">' + labels + '</div></div>';
+    },
+    /* pie chart: slices: [{label, value}] or items */
+    pie: function (b) {
+      var it = (b.slices || b.items || []).slice(0, 8);
+      if (!it.length) return '';
+      var total = it.reduce(function (s, i) { return s + (Number(i.value) || 0); }, 0) || 1, off = 0;
+      var arcs = it.map(function (i, n) {
+        var frac = (Number(i.value) || 0) / total * 100, s = '<circle cx="21" cy="21" r="15.9" fill="none" stroke="' + CC[n % CC.length] + '" stroke-width="6" pathLength="100" stroke-dasharray="' + frac.toFixed(2) + ' ' + (100 - frac).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" transform="rotate(-90 21 21)" />';
+        off += frac; return s;
+      }).join('');
+      var lg = it.map(function (i, n) { return '<div class="lg-item"><span class="lg-dot" style="background:' + CC[n % CC.length] + '"></span><span class="lg-l">' + esc(str(i.label, 16)) + '</span><b>' + esc(str(i.value, 10)) + '</b></div>'; }).join('');
+      return '<div class="chart-pie"><svg viewBox="0 0 42 42">' + arcs + '</svg><div class="lg">' + lg + '</div></div>';
+    },
+    /* donut chart: slices: [{label, value}], center, sub */
+    donut: function (b) {
+      var it = (b.slices || b.items || []).slice(0, 8);
+      if (!it.length) return '';
+      var total = it.reduce(function (s, i) { return s + (Number(i.value) || 0); }, 0) || 1, off = 0;
+      var arcs = it.map(function (i, n) {
+        var frac = (Number(i.value) || 0) / total * 100, s = '<circle cx="21" cy="21" r="15.9" fill="none" stroke="' + CC[n % CC.length] + '" stroke-width="4.5" pathLength="100" stroke-dasharray="' + frac.toFixed(2) + ' ' + (100 - frac).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" transform="rotate(-90 21 21)" />';
+        off += frac; return s;
+      }).join('');
+      var ctr = b.center ? '<div class="donut-c"><b>' + esc(str(b.center, 12)) + '</b>' + (b.sub ? '<span>' + esc(str(b.sub, 20)) + '</span>' : '') + '</div>' : '';
+      var lg = it.map(function (i, n) { return '<div class="lg-item"><span class="lg-dot" style="background:' + CC[n % CC.length] + '"></span><span class="lg-l">' + esc(str(i.label, 16)) + '</span><b>' + esc(str(i.value, 10)) + '</b></div>'; }).join('');
+      return '<div class="chart-donut"><svg viewBox="0 0 42 42">' + arcs + '</svg>' + ctr + '<div class="lg">' + lg + '</div></div>';
+    },
+    /* histogram: items: [{label, value}] — bars with no gaps */
+    hist: function (b) {
+      var it = (b.items || []).slice(0, 15);
+      if (!it.length) return '';
+      var max = Math.max.apply(null, it.map(function (i) { return Number(i.value) || 0; }).concat(1));
+      return '<div class="chart-hist">' + it.map(function (i, n) {
+        return '<div class="hbar' + (n === it.length - 1 ? ' now' : '') + '"><i style="--p:' + Math.round((Number(i.value) || 0) / max * 100) + '"></i><span>' + esc(str(i.label, 6)) + '</span></div>';
+      }).join('') + '</div>';
+    },
+    /* gauge: value 0-100, label, center */
+    gauge: function (b) {
+      var v = pct(b.value), filled = (v * 0.75).toFixed(2);
+      return '<div class="chart-gauge"><svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--track)" stroke-width="4" pathLength="100" stroke-dasharray="75 100" transform="rotate(135 21 21)" stroke-linecap="round" /><circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--teal)" stroke-width="4" pathLength="100" stroke-dasharray="' + filled + ' 100" transform="rotate(135 21 21)" stroke-linecap="round" /></svg><div class="gauge-c"><b>' + esc(str(b.center != null ? b.center : Math.round(v), 8)) + '</b>' + (b.label ? '<span>' + esc(str(b.label, 20)) + '</span>' : '') + '</div></div>';
+    },
+    /* ring: value 0-100, label, center */
+    ring: function (b) {
+      var v = pct(b.value);
+      return '<div class="chart-ring"><svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--track)" stroke-width="4" pathLength="100" /><circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--teal)" stroke-width="4" pathLength="100" stroke-dasharray="' + v + ' ' + (100 - v) + '" transform="rotate(-90 21 21)" stroke-linecap="round" /></svg><div class="ring-c"><b>' + esc(str(b.center != null ? b.center : Math.round(v), 8)) + '</b>' + (b.label ? '<span>' + esc(str(b.label, 20)) + '</span>' : '') + '</div></div>';
+    },
+    /* scatter: points: [{x, y, label}] — x and y are 0-100 */
+    scatter: function (b) {
+      var pts = (b.points || []).slice(0, 30);
+      if (!pts.length) return '';
+      var W = 200, H = 80, pad = 6;
+      var dots = pts.map(function (p) {
+        var x = pad + (clamp(Number(p.x), 0, 100) / 100) * (W - pad * 2), y = H - pad - (clamp(Number(p.y), 0, 100) / 100) * (H - pad * 2);
+        return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2.5" fill="var(--teal)" opacity="0.7" />';
+      }).join('');
+      return '<div class="chart-scatter"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none"><line x1="' + pad + '" y1="' + (H - pad) + '" x2="' + (W - pad) + '" y2="' + (H - pad) + '" stroke="var(--edge-strong)" stroke-width="0.5" /><line x1="' + pad + '" y1="' + pad + '" x2="' + pad + '" y2="' + (H - pad) + '" stroke="var(--edge-strong)" stroke-width="0.5" />' + dots + '</svg></div>';
+    },
+    /* heatmap: items: [{label, value}] — value 0-100, colored by intensity */
+    heat: function (b) {
+      var it = (b.items || []).slice(0, 49);
+      if (!it.length) return '';
+      var max = Math.max.apply(null, it.map(function (i) { return Number(i.value) || 0; }).concat(1));
+      return '<div class="chart-heat">' + it.map(function (i) {
+        var v = (Number(i.value) || 0) / max, op = (0.08 + v * 0.92).toFixed(2);
+        return '<div class="hcell" style="background:rgba(20,184,166,' + op + ')" title="' + esc(str(i.label, 20)) + ': ' + esc(str(i.value, 10)) + '"></div>';
+      }).join('') + '</div>';
+    }
+  };
+  var HEX = /^#[0-9a-f]{3,8}$/i;
+  var DEFAULT_ICON = 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z';
+
+  function registerCustom(spec) {
+    if (!spec || typeof spec !== 'object') throw new Error('spec must be a JSON object');
+    var id = str(spec.id, 24);
+    if (!/^[a-z][a-z0-9-]{1,23}$/.test(id)) throw new Error('id must be 2-24 chars: a-z, 0-9, dash');
+    if (BUILTIN.indexOf(id) > -1) throw new Error('"' + id + '" is a built-in widget');
+    if (!Array.isArray(spec.blocks) || !spec.blocks.length) throw new Error('blocks must be a non-empty array');
+    var bad = spec.blocks.filter(function (b) { return !b || !BLOCK[b.type]; })[0];
+    if (bad !== undefined) throw new Error('unknown block type "' + (bad && bad.type) + '" (use ' + Object.keys(BLOCK).join(', ') + ')');
+    var ti = typeof spec.title === 'object' && spec.title ? spec.title : { en: spec.title };
+    var title = str(ti.en || id, 40);
+    I18N.en['w.' + id] = title;
+    I18N.ms['w.' + id] = str(ti.ms || title, 40);
+    var g = (spec.colors || []).filter(function (c) { return HEX.test(c); });
+    var sz = spec.size || [];
+    var dw = clamp(Math.round(sz[0]) || 4, 2, 12), dh = clamp(Math.round(sz[1]) || 4, 1, 12);
+    var path = /^[MmLlHhVvCcSsQqTtAaZz0-9 ,.\-]+$/.test(spec.icon || '') ? spec.icon : DEFAULT_ICON;
+    var defs = $('svg defs'), old = $('#i-c-' + id, defs);
+    if (old) old.remove();
+    defs.insertAdjacentHTML('beforeend', '<symbol id="i-c-' + id + '" viewBox="0 0 24 24"><path d="' + path + '"/></symbol>');
+    var blocks = spec.blocks.slice(0, 40);
+    var mn = spec.mini || {};
+    var isNew = !MOD[id];
+    MOD[id] = {
+      id: id, ic: 'i-c-' + id, g: g.length > 1 ? g.slice(0, 2) : ['#7dd3c8', '#2a9d8f'], gi: HEX.test(spec.iconColor) ? spec.iconColor : '', def: [dw, dh], min: [2, 1], custom: 1,
+      render: function () { return blocks.map(function (b) { return BLOCK[b.type](b); }).join(''); },
+      mini: function () { return mini(mn.big != null ? mn.big : blocks.length, mn.l1 || title, mn.l2); }
+    };
+    CH[id] = dh;
+    if (isNew) TRAY.push(id);
+    var all = store.get(CUSTOM_KEY) || {};
+    all[id] = spec;
+    store.set(CUSTOM_KEY, all);
+    return id;
+  }
+  /* register, show in the tray, and put it on the board (or refresh it if already there) */
+  function createWidget(spec) {
+    var id = registerCustom(spec);
+    buildTiles();
+    if (els[id]) { fill(id); updateTray(); pulse(id); } else addWidget(id);
+    return id;
+  }
+  function loadCustom() {
+    var all = store.get(CUSTOM_KEY) || {};
+    Object.keys(all).concat((D.widgets || []).map(function (s) { return s; })).forEach(function (k) {
+      try { registerCustom(typeof k === 'string' ? all[k] : k); } catch (e) { /* a bad saved spec is skipped, not fatal */ }
+    });
+  }
+  function chatCreate(text) {
+    var raw = text.replace(/^\/create\s*/i, '').replace(/^```(?:json)?\s*|\s*```$/gi, '').trim();
+    if (!raw) return t('chat.create.help');
+    /* Only attempt JSON parse if it looks like JSON; natural-language descriptions
+       need the bridge server (which is apparently not running right now). */
+    if (raw.charAt(0) !== '{' && raw.charAt(0) !== '[') {
+      return t('chat.bridge.desc');
+    }
+    try { return t('chat.create.ok', { w: t('w.' + createWidget(JSON.parse(raw))) }); } catch (e) { return t('chat.create.bad', { e: e.message }); }
+  }
   function preset(n) {
     var wide = P[n].map(function (a) { return { id: a[0], x: a[1], y: a[2], w: a[3], h: a[4] }; });
     var y = 0;
@@ -276,6 +448,7 @@
   var els = {};
 
   function measure() {
+    if (!grid.clientWidth) return; /* board is hidden while the Pipeline view is open */
     var W = grid.clientWidth || 360;
     S.bp = W < 560 ? 'compact' : 'wide';
     S.cols = W < 560 ? 4 : W < 760 ? 8 : 12;
@@ -568,6 +741,7 @@
     { id: 'layouts', ic: 'i-layout', label: function () { return 'dock.layouts'; }, cap: function () { return 'dock.cap.layouts'; }, act: function (b) { togglePop('popLayouts', b); } },
     { id: 'save', ic: 'i-save', label: function () { return S.dirty ? 'dock.unsaved' : 'dock.save'; }, cap: function () { return 'dock.cap.save'; }, badge: function () { return S.dirty; }, act: function () { save(); } },
     { id: 'sync', ic: 'i-sync', label: function () { return 'dock.sync'; }, cap: function () { return 'dock.cap.sync'; }, act: function () { if (okToDiscard()) location.reload(); } },
+    { id: 'pipeline', ic: 'i-flow', label: function () { return 'dock.pipeline'; }, cap: function () { return 'dock.cap.pipeline'; }, pressed: function () { return S.view === 'pipeline'; }, act: function () { setView(S.view === 'pipeline' ? 'board' : 'pipeline'); } },
     { sep: true },
     { id: 'settings', ic: 'i-gear', label: function () { return 'dock.settings'; }, cap: function () { return 'dock.cap.settings'; }, act: function (b) { togglePop('popSettings', b); } }
   ];
@@ -705,28 +879,116 @@
     toast(t('toast.layout', { n: t('layout.' + n) }));
   });
 
-  /* ---------- chat (WorkBuddy) ---------- */
+  /* ---------- chat (WorkBuddy bridge) ----------
+     The chat sends messages to the local bridge server (POST /api/chat).
+     For /create <description>: the bridge generates a widget JSON spec and we call Kaunter.create(spec).
+     For /create <JSON>: the bridge validates and returns the spec.
+     For regular chat: the bridge returns a helpful response.
+     If the server is not running, we fall back to local /create JSON parsing. */
   var chatLog = $('#chatLog'), chatIn = $('#chatIn'), chatHist = [];
-  function chatAdd(who, text) {
-    chatHist.push([who, text]);
+  function chatAdd(who, text, isTyping) {
+    if (!isTyping) chatHist.push([who, text]);
     var m = document.createElement('div');
-    m.className = 'msg ' + who;
-    m.textContent = text;
+    m.className = 'msg ' + who + (isTyping ? ' typing' : '');
+    if (isTyping) { m.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>'; }
+    else { m.textContent = text; }
     chatLog.appendChild(m);
     chatLog.scrollTop = chatLog.scrollHeight;
+    return m;
   }
   function chatOpen() { if (!chatHist.length) chatAdd('bot', t('chat.hello')); }
-  // ponytail: stub. Swap this for a call to WorkBuddy (e.g. write to /inbox) once its route exists.
-  // KAUNTER_CHAT_DEMO(text) -> Promise<string> lets a demo/video fake the reply without touching this file.
-  function sendToWorkBuddy(text) { return window.KAUNTER_CHAT_DEMO ? window.KAUNTER_CHAT_DEMO(text) : Promise.resolve(t('chat.stub')); }
+
+  /* "Thinking..." line (port of React Bits ThoughtLine, no React/Tailwind): breathing sparkle, shimmering label, live timer, a step trace.
+     step(text) appends a step (the last one is current, earlier ones tick); settle() freezes the clock into "Thought for 2.3s" and folds the trace. */
+  var fmtDs = function (ds) { return ds < 600 ? (ds / 10).toFixed(1) + 's' : Math.floor(ds / 600) + 'm ' + ((ds % 600) / 10).toFixed(1) + 's'; };
+  function thinking() {
+    var m = document.createElement('div'), t0 = Date.now(), steps = [], done = false;
+    m.className = 'msg bot think';
+    m.dataset.working = '';
+    m.dataset.open = '';
+    m.innerHTML = '<button type="button" class="tl-head" aria-expanded="true"><span class="tl-glyph" aria-hidden="true">' + ic('i-spark') + '</span>' +
+      '<span class="tl-stack"><span class="tl-work"><span class="tl-sheen">' + esc(t('chat.thinking')) + '</span> <span class="tl-t">0.0s</span></span><span class="tl-done"></span></span>' +
+      '<span class="tl-chev" aria-hidden="true">' + ic('i-down') + '</span></button><div class="tl-trace"><div><ul class="tl-steps"></ul></div></div>';
+    var head = $('.tl-head', m), clock = $('.tl-t', m), list = $('.tl-steps', m);
+    var tick = setInterval(function () { clock.textContent = fmtDs(Math.floor((Date.now() - t0) / 100)); }, 100);
+    head.addEventListener('click', function () {
+      if (!steps.length) return;
+      var on = m.hasAttribute('data-open');
+      if (on) m.removeAttribute('data-open'); else m.dataset.open = '';
+      head.setAttribute('aria-expanded', !on);
+    });
+    chatLog.appendChild(m);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    return {
+      step: function (text) {
+        if (done) return;
+        steps.push(text);
+        m.dataset.has = '';
+        list.insertAdjacentHTML('beforeend', '<li><span class="tl-mark">' + ic('i-check') + '<i></i></span><span>' + esc(text) + '</span></li>');
+        $$('li', list).forEach(function (li, i, a) { if (i < a.length - 1) li.setAttribute('data-done', ''); });
+        chatLog.scrollTop = chatLog.scrollHeight;
+      },
+      settle: function () {
+        if (done) return;
+        done = true;
+        clearInterval(tick);
+        $('.tl-done', m).textContent = t('chat.thought', { t: fmtDs(Math.floor((Date.now() - t0) / 100)) });
+        m.removeAttribute('data-working');
+        m.removeAttribute('data-open');
+        head.setAttribute('aria-expanded', 'false');
+        $$('li', list).forEach(function (li) { li.setAttribute('data-done', ''); });
+      }
+    };
+  }
+
+  function chatSend(text) {
+    var th = thinking();
+    th.step(t('chat.think.read'));
+    th.step(t('chat.think.ask'));
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text })
+    }).then(function(r) { return r.json(); }).then(function(res) {
+      th.settle();
+      if (res.type === 'widget' && res.spec) {
+        try {
+          var id = window.Kaunter.create(res.spec);
+          chatAdd('bot', res.message || t('chat.create.ok', { w: t('w.' + id) }));
+        } catch (e) {
+          chatAdd('bot', t('chat.create.bad', { e: e.message }));
+        }
+      } else if (res.type === 'error') {
+        chatAdd('bot', res.message);
+      } else {
+        chatAdd('bot', res.message || String(res));
+      }
+      if (window.Buddy) window.Buddy.react('reply');
+    }).catch(function() {
+      th.settle();
+      /* Fallback: if bridge is not running, handle /create locally (raw JSON only) */
+      if (/^\/create(\s|$)/i.test(text)) {
+        var reply = chatCreate(text);
+        chatAdd('bot', reply);
+        /* If the reply is a bridge-needed message, don't double-up with another bridge hint */
+        if (reply.indexOf('bridge server') === -1 && reply.indexOf('Could not create') > -1) {
+          chatAdd('bot', t('chat.bridge.down'));
+        }
+      } else {
+        chatAdd('bot', t('chat.bridge.down'));
+      }
+      if (window.Buddy) window.Buddy.react('reply');
+    });
+  }
+
   $('#chatForm').addEventListener('submit', function (e) {
     e.preventDefault();
     var text = chatIn.value.trim();
     if (!text) return;
     chatIn.value = '';
-    chatAdd('me', text);
+    chatAdd('me', text.length > 60 ? text.slice(0, 57) + '…' : text);
     if (window.Buddy) window.Buddy.react('send');
-    sendToWorkBuddy(text).then(function (r) { chatAdd('bot', r); if (window.Buddy) window.Buddy.react('reply'); });
+    chatSend(text);
   });
 
   function syncLang() { $$('[data-lang]').forEach(function (b) { b.setAttribute('aria-checked', b.dataset.lang === lang); }); }
@@ -805,6 +1067,18 @@
     updateDock();
     if (m === 'view' && S.dirty) toast(t('toast.unsaved'));
   }
+  /* Pipeline view: same page, the dock toggles it in place of the dotted canvas (pipeline.js draws it) */
+  function setView(v) {
+    S.view = v;
+    app.dataset.view = v;
+    $('#canvas').hidden = v === 'pipeline';
+    $('#plView').hidden = v !== 'pipeline';
+    closePop();
+    if (v === 'pipeline') window.KaunterPipeline.show(); else { measure(); render(); }
+    updateDock();
+    scrollTo(0, 0);
+  }
+  $('#plBack').addEventListener('click', function () { setView('board'); });
   function okToDiscard() { return !S.dirty || confirm(t('confirm.discard')); }
   function save() {
     store.set('kaunter.layout.v1', S.layout);
@@ -815,12 +1089,19 @@
   }
 
   /* WorkBuddy (or a demo) can call Kaunter.refresh() after it rewrites window.KAUNTER_DATA; pass a widget id to pulse it. */
-  window.Kaunter = { refresh: function (pulseId) { Object.keys(els).forEach(fill); renderBar(); if (pulseId) pulse(pulseId); } };
+  window.Kaunter = {
+    refresh: function (pulseId) { loadCustom(); Object.keys(els).forEach(fill); renderBar(); if (pulseId) pulse(pulseId); },
+    create: createWidget /* Kaunter.create(spec): same as chat "/create"; WorkBuddy can call it directly */
+  };
 
   /* ---------- boot ---------- */
   function init() {
+    loadCustom();
     S.layout = store.get('kaunter.layout.v1');
-    if (S.layout && S.layout.wide && S.layout.compact) S.name = 'saved'; else { S.layout = preset('starter'); S.name = 'starter'; }
+    if (S.layout && S.layout.wide && S.layout.compact) {
+      S.name = 'saved';
+      ['wide', 'compact'].forEach(function (k) { S.layout[k] = S.layout[k].filter(function (w) { return MOD[w.id]; }); }); /* drop widgets whose spec is gone */
+    } else { S.layout = preset('starter'); S.name = 'starter'; }
     measure();
     S.layout[S.bp] = normalize(S.layout[S.bp], S.cols);
     applyI18n();
@@ -834,7 +1115,7 @@
     addEventListener('resize', function () {
       measure();
       if (S.bp + S.cols !== lastKey) { lastKey = S.bp + S.cols; S.layout[S.bp] = normalize(S.layout[S.bp], S.cols); }
-      render();
+      if (S.view === 'board') render();
       closePop();
     });
     setInterval(function () { if (els.time) fill('time'); renderBar(); }, 15000);

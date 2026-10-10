@@ -1,0 +1,11 @@
+{
+  "name": "kaunter-bridge",
+  "version": "1.0.0",
+  "description": "Local bridge server connecting Kaunter chat to a widget-generation agent",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js",
+    "dev": "node bridge.js"
+  },
+  "dependencies": {}
+}

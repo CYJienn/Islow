@@ -1,0 +1,12 @@
+{"id":"inbox","title":{"en":"Email agent","ms":"Ejen e-mel"},"icon":"M4 6h16v12H4zM4 7l8 6 8-6","colors":["#5eead4","#0d9488"],"iconColor":"#04201c","size":[4,4],
+"mini":{"big":"3","l1":"need a reply","l2":"12 emails sorted"},
+"blocks":[{"type":"sum","bold":"3 need a reply","text":"of 12 emails today"},{"type":"row","title":"Invoice from Ah Seng Supplies","sub":"Bill","pill":"Due Friday","late":true},{"type":"row","title":"Can you deliver on Monday?","sub":"Customer"},{"type":"row","title":"Weekly newsletter","sub":"Ignored"}],
+"pipeline":{"nodes":[
+{"id":"mail","kind":"trigger","icon":"M4 6h16v12H4zM4 7l8 6 8-6","title":"New email","sub":"Gmail inbox","desc":"Fires when a new email lands in the inbox you connected to WorkBuddy."},
+{"id":"agent","kind":"ai","title":"Email agent","sub":"reads and drafts","desc":"WorkBuddy reads the email, pulls out who sent it, what they want and any dates or amounts."},
+{"id":"cls","kind":"branch","title":"Classifier","sub":"needs a reply?","desc":"Sorts each email into Bill, Customer or Ignore. Only Bill and Customer emails reach the widget."},
+{"id":"json","kind":"data","title":"JSON data","sub":"data.js","desc":"The sorted emails are written as JSON for the board to read."},
+{"id":"w","kind":"widget","title":"Email agent","sub":"on your board","desc":"Shows how many emails need a reply and lists the urgent ones."},
+{"id":"llm","kind":"model","title":"AI model","sub":"language model","desc":"The language model the agent uses to read the email."},
+{"id":"mem","kind":"memory","title":"Sender memory","sub":"past senders","desc":"Remembers who your regular suppliers and customers are so sorting improves."}],
+"edges":[["mail","agent"],["agent","cls"],["cls","json","reply"],["json","w"],["llm","agent",null,"dashed"],["mem","agent",null,"dashed"]]}}
