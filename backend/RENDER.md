@@ -1,0 +1,21 @@
+# Render deployment
+
+Create a free Python Web Service from CYJienn/Islow, branch main.
+
+- Root directory: backend
+- Build: pip install -r requirements-render.txt
+- Start: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+- Health check: /api/v1/health
+- ENVIRONMENT: production
+- CORS_ORIGINS: https://agentsdiscusstors.vercel.app
+- OPENAI_MODEL: gpt-6-luna
+
+The root render.yaml records these settings. API docs are at /docs. On Vercel, set the server-side BACKEND_URL variable to the Render HTTPS address and redeploy. Browser requests use the same-origin /api/v1 proxy. Never put API keys in NEXT_PUBLIC variables or Git.
+
+OPENAI_API_KEY is required for live manager answers. TAVILY_API_KEY is required for live competitor research. Add these privately through Render's environment settings. They are not supplied by this repository.
+
+The free API profile excludes optional torch/transformers and GPU dependencies. Local sentiment inference therefore reports unavailable; other analysis can return partial results. Full local model inference needs a suitable separately provisioned runtime.
+
+The standalone invoice/report service on port 8090 is not included in this cloud deployment. Its synced Windows OneDrive paths, local SQLite approvals, Node artifact exporter and Telegram polling remain local. Hosted invoice reporting needs cloud document intake and persistent state; do not expose the existing localhost-only service directly.
+
+Render free instances sleep when idle and have ephemeral files. This deployment stores no uploaded invoices on the server.

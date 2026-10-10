@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: agentsdiscusstors-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements-render.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        value: https://agentsdiscusstors.vercel.app
+      - key: OPENAI_MODEL
+        value: gpt-6-luna
