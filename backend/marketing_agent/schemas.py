@@ -37,6 +37,7 @@ class AnalyzeRequest(BaseModel):
     business: Business
     reviews: list[Review] = Field(default_factory=list, max_length=200)
     research_mode: Literal["demo", "live"] = "demo"
+    document_evidence: list[Finding] = Field(default_factory=list, max_length=5)
 
 
 class SentimentReport(BaseModel):
@@ -127,6 +128,7 @@ class Report(BaseModel):
     business_name: str
     sentiment: SentimentReport
     competitor_findings: list[Finding]
+    document_evidence: list[Finding] = Field(default_factory=list)
     ranked_campaigns: list[RankedCampaign]
     unavailable_metrics: list[str] = ["competitor_conversion_rate", "checkout_rate", "actual_sales_uplift"]
     warnings: list[str]

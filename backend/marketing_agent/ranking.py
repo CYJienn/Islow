@@ -5,7 +5,7 @@ def rank(drafts: list[DraftCampaign], budget: float, sentiment: SentimentReport,
          findings: list[Finding]) -> tuple[list[RankedCampaign], list[str]]:
     valid_ids = {r["evidence_id"] for r in sentiment.representative_reviews} | {f.evidence_id for f in findings}
     external_ids = {f.evidence_id for f in findings if f.evidence_type == "verified_source" and f.source_url}
-    review_ids = {r["evidence_id"] for r in sentiment.representative_reviews}
+    review_ids = {r["evidence_id"] for r in sentiment.representative_reviews} | {f.evidence_id for f in findings if f.evidence_type == "provided_document"}
     seen_names, seen_ideas = set(), set()
     ranked, warnings = [], []
     for draft in drafts:

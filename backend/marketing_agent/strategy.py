@@ -10,17 +10,13 @@ def generate(request: AnalyzeRequest, sentiment: SentimentReport, findings: list
         path = Path(__file__).parent / "fixtures" / "demo_campaigns.json"
         drafts = [DraftCampaign.model_validate(x) for x in json.loads(path.read_text(encoding="utf-8"))]
         return drafts, "fixture", 0, ["Campaign drafts are illustrative demo fixtures, not LLM-generated output."], None
-    if not (settings.llm_api_key and settings.llm_model):
-        return [], "unavailable", 0, ["LLM_API_KEY or LLM_MODEL missing; live strategy unavailable."], None
+    if not (settings.google_api_key and settings.gemini_model):
+        return [], "unavailable", 0, ["GOOGLE_API_KEY or GEMINI_MODEL missing; live strategy unavailable."], None
     try:
-        from langchain_openai import ChatOpenAI
-        llm_options = dict(model=settings.llm_model, api_key=settings.llm_api_key,
-                           base_url=settings.llm_base_url or None, timeout=settings.llm_timeout_seconds,
-                           max_tokens=2200, max_retries=0)
-        if not settings.llm_base_url and settings.llm_model == "gpt-6-luna":
-            llm_options["reasoning_effort"] = "none"
-            llm_options["model_kwargs"] = {"response_format": {"type": "json_object"}}
-        llm = ChatOpenAI(**llm_options)
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        llm = ChatGoogleGenerativeAI(model=settings.gemini_model, api_key=settings.google_api_key,
+                                    timeout=settings.llm_timeout_seconds, max_output_tokens=2200,
+                                    max_retries=0, temperature=0)
     except Exception as exc:
         return [], "unavailable", 0, [f"LLM initialization failed: {type(exc).__name__}."], None
     context = {"business": request.business.model_dump(),

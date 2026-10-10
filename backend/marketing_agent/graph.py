@@ -43,6 +43,7 @@ def search_competitors(state: MarketingState) -> dict:
 def analyze_competitors(state: MarketingState) -> dict:
     request = AnalyzeRequest.model_validate(state["request"])
     findings, warnings = normalize(state["competitor_raw"], request.research_mode, get_settings().max_search_results, request.business)
+    findings = request.document_evidence + findings
     return {"competitor_findings": [f.model_dump() for f in findings], "competitor_warnings": state["search_warnings"] + warnings}
 
 
@@ -77,7 +78,8 @@ def build_report(state: MarketingState) -> dict:
                 and (request.research_mode != "live" or (bool(state["competitor_findings"]) and not state["search_warnings"])))
     report = Report(task_id=request.task_id, status="completed" if complete else "partial", data_mode=mode,
                     business_name=request.business.name, sentiment=SentimentReport.model_validate(state["sentiment"]),
-                    competitor_findings=[Finding.model_validate(f) for f in state["competitor_findings"]],
+                    competitor_findings=[Finding.model_validate(f) for f in state["competitor_findings"] if f["evidence_type"] != "provided_document"],
+                    document_evidence=request.document_evidence,
                     ranked_campaigns=state["ranked_campaigns"], warnings=warnings,
                     execution=Execution(sentiment_engine=state["sentiment_engine"], research_engine=state["research_engine"],
                                         strategy_engine=state["strategy_engine"], search_calls=state["search_calls"],

@@ -401,8 +401,11 @@ def evaluate(invoice, dataset, policy):
                 pool.submit(accounting, invoice, dataset)]
         for job in jobs:
             findings.extend(job.result())
-    from ai_risk import review
-    ai = review(invoice, findings, dataset['kind'])
+    try:
+        from .ai_risk import review
+    except ImportError:
+        from ai_risk import review
+    ai = review(invoice, findings, dataset['kind']) if policy.get('ai_risk_enabled', True) else None
     if ai:
         status = 'FAIL' if ai['risk'] == 'SUSPECTED_RISK' else 'UNKNOWN' if ai['risk'] == 'INSUFFICIENT_EVIDENCE' else 'NOT_APPLICABLE'
         findings.append(finding('fraud', 'GPT_RISK_REVIEW', status, [invoice], ai['risk'],
@@ -451,7 +454,10 @@ def run_analysis(config):
     document_results = []
     document_manifest = []
     if config.get('invoice_input_dir'):
-        from document_intake import read_documents
+        try:
+            from .document_intake import read_documents
+        except ImportError:
+            from document_intake import read_documents
         invoices, document_results, document_manifest = read_documents(config['invoice_input_dir'])
         dataset['reference_invoices'] = dataset['invoices']
         dataset['invoices'] = invoices
@@ -467,11 +473,17 @@ def run_analysis(config):
         raise ValueError("Duplicate stable case IDs")
     tests = []
     if config.get("include_test_cases"):
-        from fixtures import test_datasets
+        try:
+            from .fixtures import test_datasets
+        except ImportError:
+            from fixtures import test_datasets
         for test in test_datasets():
             tests.extend(evaluate(i, test, policy) for i in test["invoices"])
     cases = supplied + tests
-    from final_report import batch_results
+    try:
+        from .final_report import batch_results
+    except ImportError:
+        from final_report import batch_results
     return {"engine_version": VERSION, "created_at": now(), "source_manifest": manifest,
             "batch_results": batch_results(cases),
             "document_intake": document_results,

@@ -1,7 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
-from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,9 +12,8 @@ class Settings(BaseSettings):
     sentiment_model_id: str = "KaiHuang05/growthlab-sentiment-yelp-tuned"
     hf_token: str = ""
     tavily_api_key: str = ""
-    llm_api_key: str = Field(default="", validation_alias=AliasChoices("LLM_API_KEY", "OPENAI_API_KEY"))
-    llm_base_url: str = ""
-    llm_model: str = "gpt-6-luna"
+    google_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
     marketing_api_token: str = ""
     max_reviews: int = 200
     max_search_queries: int = 3

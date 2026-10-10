@@ -3,7 +3,10 @@ from pathlib import Path
 import re
 import zipfile
 import xml.etree.ElementTree as ET
-from engine import file_hash
+try:
+    from .engine import file_hash
+except ImportError:
+    from engine import file_hash
 
 _ocr = None
 
