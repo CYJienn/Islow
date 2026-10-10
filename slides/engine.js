@@ -156,7 +156,7 @@ function burst(t, x, y, n = 36, spread = 700, parent = hud) {
 }
 const LOGO = (s) => `<svg class="logo-mark" width="${s}" height="${s}" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#28b894"/><path d="M10 10.5l6 5.5-6 5.5" fill="none" stroke="#04163c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 22.5h5" stroke="#04163c" stroke-width="2.6" stroke-linecap="round"/></svg>`;
 
-/* pixel buddy sprite, kept in sync with dashboard/buddy.js */
+/* pixel buddy sprite, kept in sync with frontend/buddy.js */
 const BUDDY = ['..oo........oo..', '.owwo......owwo.', '.owwoooooooowwo.', '.owwwwwwwwwwwwo.', 'hhowkkkkkkkkwohh', 'hhokkkkkkkkkkohh', 'hhokkkkkkkkkkohh', 'hhokkkkkkkkkkohh', 'hhokkkkkkkkkkohh', '.owwwwwwwwwwwwo.', '..oowwwwwwwwoo..', '.howwwwwwwwwwoh.', '.howwwwsswwwwoh.', '.hoswwwwwwwwsoh.', '...oooooooooo...', '..hhh......hhh..'];
 const PAL = { o: '#10162e', w: '#f4f7ff', s: '#b9c4dd', k: '#0a0f24', h: '#8794b4', e: '#3ee6b0', p: '#ff7aa8' };
 function buddyCanvas(size, mode = 'open', parent = hud) {
@@ -212,7 +212,7 @@ class App {
         this.w.scrollBy = () => {};
         this.f.contentDocument.fonts.ready.then(() => setTimeout(res, 250));
       };
-      this.f.src = '../dashboard/index.html';
+      this.f.src = '../frontend/index.html';
     });
   }
   doc() { try { return this.f.contentDocument; } catch (e) { return null; } }

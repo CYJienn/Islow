@@ -35,7 +35,7 @@ const page = await ctx.newPage();
 page.on('console', (m) => { if (m.type() === 'error') console.log('[page error]', m.text()); });
 page.on('pageerror', (e) => console.log('[page exception]', e.message));
 await page.clock.install({ time: new Date('2026-10-10T10:24:00+08:00') });
-await page.goto(`http://localhost:${port}/showcase/film.html?cut=${cut}`);
+await page.goto(`http://localhost:${port}/slides/film.html?cut=${cut}`);
 await page.waitForFunction(() => window.READY === true, null, { timeout: 180000 });
 const now = await page.evaluate(() => Date.now());
 await page.clock.pauseAt(new Date(now + 500));
