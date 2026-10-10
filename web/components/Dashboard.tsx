@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 import { owner, reminders, upcoming } from "@/lib/data";
 import { LIST, START, WIDGETS, Widget, useStore } from "./Widgets";
-import FinanceReport from "./FinanceReport";
 import ProfileDialog, { KEY as PROFILE_KEY, emptyProfile, loadProfile, chatBody, type Profile } from "./ProfileDialog";
 
 function List({ title, items }: { title: string; items: string[] }) {
@@ -242,7 +241,6 @@ export default function Dashboard({ onCouncil }: { onCouncil: (question: string,
             </div>
           )}
           <h2>Hi {profile.owner || owner}, how can we help you?</h2>
-          <FinanceReport />
           <form className="pill glow" onPointerMove={glow} onSubmit={send}>
             <input placeholder="Ask your team anything" aria-label="Message" value={draft} onChange={(e) => setDraft(e.target.value)} />
             <button aria-label="Send" disabled={busy}>↑</button>

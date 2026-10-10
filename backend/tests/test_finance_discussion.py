@@ -31,6 +31,7 @@ def test_finance_lead_receives_report_before_speaking(attached):
     assert "report-discussion" in first[2]
     assert "Never combine test and supplied totals" in first[1]
     assert response.turns[0].agent == "finance"
+    assert [turn.agent for turn in response.turns] == ["finance", "manager"]
     if attached:
         tool.assert_not_called()
     else:
@@ -40,3 +41,40 @@ def test_finance_lead_receives_report_before_speaking(attached):
 def test_report_requires_identifiable_batch_results():
     with pytest.raises(ValueError):
         ChatRequest(text="Discuss", finance={"report": {"total": "123"}})
+
+
+def test_generated_report_changes_are_read_without_frontend_upload(tmp_path):
+    from types import SimpleNamespace
+    from app.services import financial_tool
+    (tmp_path / "config.json").write_text("{}")
+    directory = tmp_path / "state" / "reports" / "report-generated"
+    directory.mkdir(parents=True)
+    path = directory / "report.json"
+    for amount in ("12.00", "27.00"):
+        path.write_text(json.dumps({"report_id": "report-generated", "batch_results": {
+            "supplied_suspected_exposure": {"MYR": amount}, "test_suspected_exposure": {}}}))
+        with patch.object(financial_tool, "ROOT", tmp_path), \
+             patch.object(financial_tool, "get_settings", return_value=SimpleNamespace(finance_report_json="")):
+            result = financial_tool._analyze("configured")
+        assert result["batch_results"]["supplied_suspected_exposure"]["MYR"] == amount
+
+
+def test_hosted_report_comes_from_configuration(tmp_path):
+    from types import SimpleNamespace
+    from app.services import financial_tool
+    (tmp_path / "config.json").write_text("{}")
+    snapshot = {"report_id": "report-hosted", "batch_results": {"checked": 7}}
+    with patch.object(financial_tool, "ROOT", tmp_path), \
+         patch.object(financial_tool, "get_settings", return_value=SimpleNamespace(finance_report_json=json.dumps(snapshot))):
+        result = financial_tool._analyze("configured")
+    assert result["report_id"] == "report-hosted"
+    assert result["batch_results"]["checked"] == 7
+
+
+def test_finance_speech_has_no_repeated_address_or_report_identifier():
+    text = "Manager Manager, **Invoice checks** from report-cf7d12cbc90d show suspected exposure of MYR 12.00, not confirmed loss."
+    spoken = company_manager.meeting_text(text, finance=True)
+    assert not spoken.startswith("Manager")
+    assert "**" not in spoken
+    assert "cf7d12cbc90d" not in spoken
+    assert "MYR 12.00, not confirmed loss" in spoken

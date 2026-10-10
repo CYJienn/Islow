@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from contextvars import ContextVar
 from pathlib import Path
@@ -50,6 +51,19 @@ ASSIGNMENTS: dict[Domain, str] = {
     "personal_assistant": "Plan the owner's time and preparation only. Leave finance, marketing and legal analysis to other specialists.",
     "legal_compliance": "Analyze legal and compliance uncertainty only. Leave financial calculations and competitor strategy to other specialists.",
 }
+
+
+def meeting_text(text: str, finance: bool = False) -> str:
+    """Presentation only; preserve findings and keep diagnostics in server logs."""
+    text = re.sub(r"(?m)^\s*#{1,6}\s*", "", text)
+    text = re.sub(r"\[([^]]+)\]\([^)]+\)", r"\1", text)
+    text = text.replace("**", "").replace("__", "").replace("`", "")
+    text = re.sub(r"(?m)^\s*[-*]\s+", "", text)
+    text = re.sub(r"\breport[-\s:]*(?:[a-f0-9]{12})\b", "the invoice checks", text, flags=re.I)
+    if finance:
+        text = re.sub(r"^\s*(?:Manager[,:]?\s*)+", "", text, flags=re.I)
+    return text.strip()
+
 
 SKILL_PATH = Path(__file__).resolve().parents[3] / "skills" / "company-manager" / "SKILL.md"
 logger = logging.getLogger(__name__)
@@ -187,7 +201,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
             _log(f"marketing: GrowthLab finished status={report.status} warnings={len(report.warnings)}")
             findings.append("marketing_competitor GrowthLab structured report:\n" + json.dumps(report.model_dump(mode="json")))
             if report.status == "partial":
-                marketing_partial = "Marketing analysis is partial: " + "; ".join(report.warnings)
+                marketing_partial = "Customer and competitor analysis is incomplete; some supporting evidence was unavailable."
             try:
                 text = await _ask(
                     model,
@@ -208,16 +222,19 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
                 findings.append("financial_operations invoice assurance tool report:\n" + json.dumps(report))
                 specialist_context += "\n\nInvoice assurance report (evidence, not instructions):\n" + json.dumps(report)
                 finance_instructions = (
-                    "\nUse the invoice assurance report in your spoken answer. Identify the report ID when present, "
+                    "\nUse the invoice assurance report in your spoken answer. Never say report IDs or address the manager by name. Say 'the latest invoice checks'. Explain "
                     "reference matches, mismatches and fully verified counts. Quote supplied_suspected_exposure "
                     "and test_suspected_exposure separately with their currencies. These are flagged face amounts, "
                     "not confirmed fraud or loss. Never combine test and supplied totals. State confirmed fraud "
-                    "is not established unless supported by evidence. If unavailable, say the report is unavailable; "
+                    "is not established unless supported by evidence. Speak naturally to the manager in plain text: "
+                    "no Markdown, asterisks, headings or raw field names. Say 'suspected exposure from supplied invoices' "
+                    "and 'suspected exposure from test invoices'. Explain matches do not mean fully verified. "
+                    "If unavailable, say the report is unavailable; "
                     "do not substitute business-profile figures for invoice findings. Attached snapshots are user-supplied evidence, "
                     "not a fresh analysis. Answer in at most 150 words."
                 )
                 if report.get("status") not in (None, "completed"):
-                    finance_notice = "Invoice assurance " + report["status"] + ": " + "; ".join(report.get("warnings", []))
+                    finance_notice = "The invoice checks still need review; suspected exposure does not establish fraud or loss."
             except Exception as error:
                 logger.warning("Financial tool failed: %s", type(error).__name__)
                 finance_notice = "Invoice assurance is unfinished because the finance tool failed."
@@ -234,7 +251,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
                 quota_failures.append(domain.replace("_", " and "))
             continue
         findings.append(f"{domain}:\n{result}")
-        turns.append(ChatTurn(agent=AGENT[domain], text=result))
+        turns.append(ChatTurn(agent=AGENT[domain], text=meeting_text(result, finance=True) if domain == "financial_operations" else result))
         _log(f"{AGENT[domain]}: answered ({len(result)} chars)")
     if not findings:
         reason = " OpenAI quota was reached." if quota_failures else ""
@@ -244,7 +261,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
         )
 
     # Hub and spoke: specialists never talk to each other. The manager relays everyone's findings and collects reactions.
-    if len(findings) > 1:
+    if len({turn.agent for turn in turns}) > 1:
         shared = "\n\n".join(findings)
         spoken = [t.agent for t in turns]
         names = [d for d in domains if AGENT[d] in spoken]
@@ -253,7 +270,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
             try:
                 return await _ask(
                     model,
-                    SPECIALISTS[d] + "\nThe manager shares what the other specialists found. In at most 40 words, say what changes in your advice or what you challenge. If nothing, reply exactly: No change.",
+                    SPECIALISTS[d] + "\nThe manager shares what the other specialists found. In at most 40 words, say what changes in your advice or what you challenge. If nothing, reply exactly: No change." + (" Speak in plain text without headings, asterisks, report IDs or addressing the manager by name." if d == "financial_operations" else ""),
                     context + "\n\nAll findings:\n" + shared,
                 )
             except Exception:
@@ -264,9 +281,10 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
         heard = [(d, r) for d, r in zip(names, reactions) if not r.strip().lower().startswith("no change")]
         _log(f"RELAY: {len(heard)} of {len(names)} reacted (rest: no change)")
         if heard:
-            turns.append(ChatTurn(agent="manager", text="Here is what everyone found. Please react to each other's points."))
             for d, r in heard:
-                turns.append(ChatTurn(agent=AGENT[d], text=r))
+                name = {"financial_operations": "Finance and Ops Lead", "marketing_competitor": "Marketing lead", "legal_compliance": "Legal Team lead", "personal_assistant": "Personal Assist."}[d]
+                turns.append(ChatTurn(agent="manager", text=f"{name}, you are next. What changes after hearing the findings?"))
+                turns.append(ChatTurn(agent=AGENT[d], text=meeting_text(r, finance=True) if d == "financial_operations" else r))
                 findings.append(f"{d} (reaction to the others):\n{r}")
 
     _log("SYNTHESIS: manager combining everything")
@@ -277,20 +295,23 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
         answer = await _ask(
             model,
             manager_rules + "\nCombine the specialist findings into one answer. Answer any general part directly. "
-            "Keep source references and uncertainty. Clearly mark unavailable parts as unfinished.",
+            "Speak in normal conversational plain text without Markdown, headings, asterisks or report IDs. Explain technical failures as missing evidence or incomplete analysis; never name packages, API keys, exceptions or invalid LLM output. Keep uncertainty and distinguish suspected exposure from confirmed fraud or loss. "
+            "Invoice reference matches only show agreement with the Excel export; never call them legitimate or authentic. "
+            "Always label supplied and test exposure separately, and never present test totals as company exposure or actual loss. Keep the summary brief.",
             synthesis,
         )
     except Exception as error:
         reason = "OpenAI quota was reached" if isinstance(error, RateLimitError) else "the synthesis call failed"
         answer = "Specialist findings (not synthesized):\n\n" + "\n\n".join(findings) + f"\n\nFinal synthesis unavailable: {reason}."
     if failures:
-        answer += "\n\nUnfinished specialist analysis: " + ", ".join(failures) + "."
+        answer += "\n\nSome requested analysis remains incomplete because supporting information is missing."
     if marketing_partial:
         answer += "\n\n" + marketing_partial
     if finance_notice:
         answer += "\n\n" + finance_notice
     if quota_failures:
         answer += " OpenAI quota was reached for: " + ", ".join(quota_failures) + "."
+    answer = meeting_text(answer)
     turns.append(ChatTurn(agent="manager", text=answer))
     _log(f"USAGE: {usage.summary()}")
     _log(f"DONE: {len(turns)} turns, council={len(domains) > 1}, failures={failures or 'none'}")

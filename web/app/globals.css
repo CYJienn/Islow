@@ -358,7 +358,7 @@ g:hover > .bar { filter: brightness(1.12); }
 /* round table: session panel (left) and character picker (right) */
 .session { width: 260px; flex: none; padding: 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
 .session-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.topic-big { font-size: 28px; line-height: 32px; font-weight: 600; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.topic-big { font-size: 24px; line-height: 29px; font-weight: 600; letter-spacing: -.02em; overflow-wrap: anywhere; }
 .session-hint { color: var(--ink-3); font-size: 13px; line-height: 18px; }
 .session-time { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
 .clock { font-size: 44px; line-height: 48px; font-weight: 600; letter-spacing: -.03em; }
