@@ -11,7 +11,7 @@ export default function Rail({ view, onView }: { view: View; onView: (v: View) =
       <button className="logo" onClick={() => onView("dash")} aria-label="Home">K</button>
       <button className={`rail-item ${view === "table" ? "on" : ""}`} onClick={() => onView("table")} title="Round table">
         <span className="avatar" style={{ width: 44, height: 44 }}>
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6"><ellipse cx="12" cy="12" rx="8" ry="5" /></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12 6v12M6 12h12" strokeLinecap="round" /></svg>
         </span>
       </button>
       {view === "dash" && (

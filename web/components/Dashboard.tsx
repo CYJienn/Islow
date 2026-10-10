@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { owner, reminders, upcoming, widgets } from "@/lib/data";
+import { owner, reminders, upcoming } from "@/lib/data";
+import { LIST, START, WIDGETS, Widget, useStore } from "./Widgets";
 import FinanceReport from "./FinanceReport";
 import ProfileDialog, { KEY as PROFILE_KEY, emptyProfile, loadProfile, chatBody, type Profile } from "./ProfileDialog";
 
@@ -13,73 +14,21 @@ function List({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-// Counts the first number in a value up once, after the card scrolls into view (DocuVerify CountUp).
-function useInView<T extends Element>() {
-  const ref = useRef<T>(null);
-  const [seen, setSeen] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || seen) return;
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setSeen(true); io.disconnect(); } }, { threshold: 0.3 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [seen]);
-  return [ref, seen] as const;
-}
-
-function CountUp({ text }: { text: string }) {
-  const [ref, seen] = useInView<HTMLSpanElement>();
-  const m = text.includes(":") ? null : text.match(/\d[\d,]*\.?\d*/);
-  const [out, setOut] = useState(text);
-  useEffect(() => {
-    if (!m || !seen || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const to = parseFloat(m[0].replace(/,/g, "")), dec = (m[0].split(".")[1] || "").length;
-    const fmt = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec, useGrouping: m[0].includes(",") });
-    let raf = 0;
-    const t = setTimeout(() => {
-      const t0 = performance.now();
-      const tick = (now: number) => {
-        const k = Math.min(1, (now - t0) / 900);
-        setOut(text.replace(m[0], fmt(to * (1 - (1 - k) ** 3))));
-        if (k < 1) raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    }, 1000);
-    setOut(text.replace(m[0], fmt(0)));
-    return () => { clearTimeout(t); cancelAnimationFrame(raf); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seen, text]);
-  return <span ref={ref}>{out}</span>;
-}
-
-// Bars start empty and grow bottom-up, staggered, the first time they are seen.
-function Bars({ values }: { values: number[] }) {
-  const [ref, seen] = useInView<HTMLDivElement>();
-  return (
-    <div className="bars" ref={ref}>
-      {values.map((v, i) => <i key={i} style={{ height: seen ? `${v}%` : "0%", transitionDelay: `${i * 80}ms`, background: `var(--b-${i === values.length - 1 ? 700 : i > 3 ? 300 : 100})` }} />)}
-    </div>
-  );
-}
-
 type Rect = { x: number; y: number; w: number; h: number };
 type Box = Rect & { id: string };
+type Cell = { x: number; y: number };
 type Drag = { kind: "move" | "resize" | "add"; id: string; px: number; py: number; off: { x: number; y: number }; target: Box | null };
 
-const KEY = "kaunter-layout-v3";
-const COLS = 12, DEF = { w: 3, h: 2 }, MIN = { w: 2, h: 1 };
-const byId = Object.fromEntries(widgets.map((w) => [w.title, w]));
-// Default layout (12 columns): x, y, w, h in grid cells.
-const START: Record<string, [number, number, number, number]> = {
-  "Sales this week": [0, 0, 3, 2], "To-do": [3, 0, 3, 2], "Spend": [6, 0, 3, 2], "Cold room": [9, 0, 3, 2],
-  "Stock alert": [0, 2, 5, 2], "Next event": [5, 2, 3, 4], "Invoices": [0, 4, 3, 2], "Customers": [8, 4, 3, 2],
-};
-const initial: Box[] = widgets.map((w) => { const [x, y, ww, h] = START[w.title]; return { id: w.title, x, y, w: ww, h }; });
+const KEY = "kaunter-layout-v4";
+// 8 columns; row height is fitted so the 6-row default fills the screen. Any widget can shrink to 1x1.
+const COLS = 8, ROWS = 6, DEF = { w: 2, h: 2 }, MIN = { w: 1, h: 1 };
+// Default layout (see START in Widgets.tsx): x, y, w, h in grid cells.
+const initial: Box[] = LIST.map((w) => { const [x, y, ww, h] = START[w.id]; return { id: w.id, x, y, w: ww, h }; });
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const overlap = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const GAP = 6; // half the space between cards: each card is inset by this on every side
-const px = (b: Rect, c: number) => ({ left: b.x * c + GAP, top: b.y * c + GAP, width: b.w * c - 2 * GAP, height: b.h * c - 2 * GAP });
+const px = (b: Rect, c: Cell) => ({ left: b.x * c.x + GAP, top: b.y * c.y + GAP, width: b.w * c.x - 2 * GAP, height: b.h * c.y - 2 * GAP });
 
 // Nearest free spot to the wanted box, so drops snap to the grid and never overlap.
 function freeSpot(others: Box[], box: Box): Box {
@@ -136,25 +85,32 @@ export default function Dashboard({ onCouncil }: { onCouncil: (question: string,
     } finally { setBusy(false); }
   };
 
-
+  const store = useStore();
   const [layout, setLayout] = useState<Box[]>(initial);
   const [edit, setEdit] = useState(false);
   const [drag, setDrag] = useState<Drag | null>(null);
-  const [cell, setCell] = useState(80);
+  const [cell, setCell] = useState<Cell>({ x: 80, y: 100 });
   const [ready, setReady] = useState(false);
   const grid = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLElement>(null);
   const live = useRef({ layout, drag, cell });
   live.current = { layout, drag, cell };
 
   useEffect(() => {
     try {
       const saved: Box[] | null = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (saved) setLayout(saved.filter((b) => byId[b.id]));
+      if (saved) setLayout(saved.filter((b) => WIDGETS[b.id]));
     } catch {}
     setReady(true);
-    const el = grid.current!;
-    const ro = new ResizeObserver(() => setCell(el.clientWidth / COLS));
-    ro.observe(el);
+    const g = grid.current!, s = stage.current!;
+    // Column width from the canvas width; row height from the stage height, so the default layout needs no scrolling.
+    const measure = () => {
+      const x = g.clientWidth / COLS, y = clamp((s.clientHeight - 40) / ROWS, 96, x * 1.35);
+      setCell((c) => (c.x === x && c.y === y ? c : { x, y }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(g); ro.observe(s);
     return () => ro.disconnect();
   }, []);
   useEffect(() => {
@@ -174,16 +130,16 @@ export default function Dashboard({ onCouncil }: { onCouncil: (question: string,
       const cur = l.find((o) => o.id === d.id);
       if (d.kind === "move" && cur) {
         const left = x - d.off.x, top = y - d.off.y;
-        const target = freeSpot(others, { ...cur, x: clamp(Math.round(left / c), 0, COLS - cur.w), y: Math.max(0, Math.round(top / c)) });
+        const target = freeSpot(others, { ...cur, x: clamp(Math.round(left / c.x), 0, COLS - cur.w), y: Math.max(0, Math.round(top / c.y)) });
         setDrag({ ...d, px: left, py: top, target });
       } else if (d.kind === "resize" && cur) {
-        const w = clamp(Math.round(x / c) - cur.x, MIN.w, COLS - cur.x), h = Math.max(MIN.h, Math.round(y / c) - cur.y);
+        const w = clamp(Math.round(x / c.x) - cur.x, MIN.w, COLS - cur.x), h = Math.max(MIN.h, Math.round(y / c.y) - cur.y);
         const cand = { ...cur, w, h };
         setDrag({ ...d, target: others.some((o) => overlap(cand, o)) ? d.target : cand });
       } else if (d.kind === "add") {
         const inside = e.clientX > gr.left - 20 && e.clientX < gr.right + 20 && e.clientY > gr.top - 20 && e.clientY < gr.bottom + 60;
         const target = inside
-          ? freeSpot(l, { id: d.id, ...DEF, x: clamp(Math.round((x - DEF.w * c / 2) / c), 0, COLS - DEF.w), y: Math.max(0, Math.round((y - DEF.h * c / 2) / c)) })
+          ? freeSpot(l, { id: d.id, ...DEF, x: clamp(Math.round((x - DEF.w * c.x / 2) / c.x), 0, COLS - DEF.w), y: Math.max(0, Math.round((y - DEF.h * c.y / 2) / c.y)) })
           : null;
         setDrag({ ...d, px: e.clientX, py: e.clientY, target });
       }
@@ -208,7 +164,7 @@ export default function Dashboard({ onCouncil }: { onCouncil: (question: string,
     if (!edit || e.button > 0) return;
     e.preventDefault();
     const gr = grid.current!.getBoundingClientRect();
-    setDrag({ kind, id: b.id, px: b.x * cell, py: b.y * cell, off: { x: e.clientX - gr.left - b.x * cell, y: e.clientY - gr.top - b.y * cell }, target: null });
+    setDrag({ kind, id: b.id, px: b.x * cell.x, py: b.y * cell.y, off: { x: e.clientX - gr.left - b.x * cell.x, y: e.clientY - gr.top - b.y * cell.y }, target: null });
   };
   const add = (id: string) => setLayout([...layout, freeSpot(layout, { id, x: 0, y: 0, ...DEF })]);
   const remove = (id: string) => setLayout(layout.filter((o) => o.id !== id));
@@ -225,25 +181,27 @@ export default function Dashboard({ onCouncil }: { onCouncil: (question: string,
     if (!layout.some((o) => o.id !== b.id && overlap(c, o))) setLayout(layout.map((o) => (o.id === b.id ? c : o)));
   };
 
-  const hidden = widgets.filter((w) => !layout.some((b) => b.id === w.title));
+  const hidden = LIST.filter((w) => !layout.some((b) => b.id === w.id));
   const rows = Math.max(...layout.map((b) => b.y + b.h), 1) + (edit ? 3 : 0);
 
   return (
     <>
       <div className="col">
       <div className="bar">
+        {edit && <span className="edit-hint">Drag a widget to move it, pull its corner to resize it</span>}
         {edit && <button className="btn" onClick={() => setLayout(initial)}>Reset</button>}
         <button className="btn" onClick={() => setProfileOpen(true)}>Edit profile</button>
         <button className={`btn ${edit ? "on" : ""}`} onClick={() => setEdit(!edit)}>{edit ? "Done" : "Customise"}</button>
       </div>
-      <main className="stage">
-        <div ref={grid} className={`canvas ${edit ? "editing" : ""}`} style={{ "--cell": `${cell}px`, height: rows * cell } as React.CSSProperties}>
+      <main className="stage" ref={stage}>
+        <div ref={grid} className={`canvas ${edit ? "editing" : ""}`} style={{ "--cx": `${cell.x}px`, "--cy": `${cell.y}px`, height: rows * cell.y } as React.CSSProperties}>
           {drag?.target && <div className="ghost" style={px(drag.target, cell)} />}
           {layout.map((b) => {
-            const w = byId[b.id];
+            const w = WIDGETS[b.id];
             const moving = drag?.id === b.id && drag.kind === "move";
             const size = drag?.id === b.id && drag.kind === "resize" && drag.target ? drag.target : b;
-            const style = moving ? { ...px(b, cell), left: drag!.px + GAP, top: drag!.py + GAP } : px(size, cell);
+            const box = px(size, cell);
+            const style = moving ? { ...px(b, cell), left: drag!.px + GAP, top: drag!.py + GAP } : box;
             return (
               <article
                 key={b.id}
@@ -254,14 +212,8 @@ export default function Dashboard({ onCouncil }: { onCouncil: (question: string,
                 onPointerDown={(e) => { if (!(e.target as HTMLElement).closest("button,.resize")) begin(e, "move", b); }}
                 onKeyDown={(e) => key(e, b)}
               >
-                {edit && <button className="x" aria-label={`Remove ${b.id}`} onClick={() => remove(b.id)}>×</button>}
-                <div className="whead">
-                  <h4 className="label">{w.title}</h4>
-                  {w.tone && !edit && <span className={`status ${w.tone}`}>{w.tone === "review" ? "Needs you" : "OK"}</span>}
-                </div>
-                <p className="big num"><CountUp text={w.big} /></p>
-                <p className="sub">{w.sub}</p>
-                {w.bars && <Bars values={w.bars} />}
+                {edit && <button className="x" aria-label={`Remove ${w.title}`} onClick={() => remove(b.id)}>×</button>}
+                <Widget def={w} W={box.width} H={box.height} edit={edit} ctx={store} />
                 {edit && <span className="resize" onPointerDown={(e) => { e.stopPropagation(); begin(e, "resize", b); }} />}
               </article>
             );
@@ -271,11 +223,11 @@ export default function Dashboard({ onCouncil }: { onCouncil: (question: string,
           <div className="tray">
             <span>{hidden.length ? "Drag onto the canvas, or tap:" : "Every widget is on the canvas."}</span>
             {hidden.map((w) => (
-              <button key={w.title} className="btn chipbtn" onPointerDown={(e) => begin(e, "add", { id: w.title, x: 0, y: 0, ...DEF })} onClick={() => add(w.title)}>+ {w.title}</button>
+              <button key={w.id} className="btn chipbtn" onPointerDown={(e) => begin(e, "add", { id: w.id, x: 0, y: 0, ...DEF })} onClick={() => add(w.id)}>+ {w.title}</button>
             ))}
           </div>
         )}
-        {drag?.kind === "add" && <div className="chip-drag" style={{ left: drag.px, top: drag.py }}>{drag.id}</div>}
+        {drag?.kind === "add" && <div className="chip-drag" style={{ left: drag.px, top: drag.py }}>{WIDGETS[drag.id]?.title}</div>}
       </main>
       </div>
       <aside className="side">
