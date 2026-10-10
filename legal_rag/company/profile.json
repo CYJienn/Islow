@@ -1,0 +1,32 @@
+{
+  "company": {
+    "name": "Kedai Maju Trading Sdn Bhd",
+    "ssm_number": "202601000000 (DEMO)",
+    "business_type": "Private limited company",
+    "industry": "Wholesale and retail of packaged food",
+    "staff_count": 12,
+    "owner_approval_limit_rm": 10000
+  },
+  "licences": [
+    {"name": "Business premises licence (PBT)", "expiry": "2026-12-31"},
+    {"name": "Halal certificate (JAKIM)", "expiry": "2027-03-15"}
+  ],
+  "trademarks": [
+    {"mark": "MAJU Kitchen", "class": 29, "expiry": "2033-06-30"}
+  ],
+  "contracts": [
+    {"id": "C-001", "type": "supplier agreement (we are buyer)", "counterparty": "Segar Foods Sdn Bhd", "signed": "2025-11-01", "term_months": 12, "auto_renew": true, "renewal_date": "2026-11-01", "notice_days": 60, "notice_deadline": "2026-09-02", "liability_cap": "none stated", "file": "contracts/C-001_segar.pdf"},
+    {"id": "C-002", "type": "service agreement (we are supplier)", "counterparty": "Bistro Rasa Enterprise", "signed": "2026-02-10", "term_months": 24, "auto_renew": false, "renewal_date": "2028-02-10", "notice_days": 30, "payment_terms_days": 30, "file": "contracts/C-002_bistro.pdf"},
+    {"id": "C-003", "type": "tenancy (we are tenant)", "counterparty": "Puan Aminah binti Rahman (DEMO)", "signed": "2024-07-01", "term_months": 36, "auto_renew": false, "renewal_date": "2027-07-01", "notice_days": 90, "file": "contracts/C-003_shoplot.pdf"}
+  ],
+  "invoices": [
+    {"no": "INV-2026-0112", "customer": "Bistro Rasa Enterprise", "amount_rm": 8400, "issued": "2026-07-01", "due": "2026-07-31", "status": "overdue", "note": "no payment, 2 reminders sent"},
+    {"no": "INV-2026-0140", "customer": "Warung Pak Din", "amount_rm": 2150, "issued": "2026-09-01", "due": "2026-10-01", "status": "paid"},
+    {"no": "INV-2026-0155", "customer": "Mini Mart Sentosa", "amount_rm": 5600, "issued": "2026-09-20", "due": "2026-10-20", "status": "open"},
+    {"no": "BILL-SEG-0907", "supplier": "Segar Foods Sdn Bhd", "amount_rm": 14200, "issued": "2026-09-07", "due": "2026-10-07", "status": "FRAUD FLAG", "note": "bank account on invoice differs from the one on file; paid RM14,200 on 2026-09-30 to the new account; supplier says it never received it"},
+    {"no": "INV-2019-0033", "customer": "Old Customer Enterprise", "amount_rm": 3000, "issued": "2019-03-01", "due": "2019-03-31", "status": "unpaid, old", "note": "tests the limitation check"}
+  ],
+  "past_matters": [
+    {"id": "M-2025-001", "summary": "Late payment from a retail customer settled after a letter of demand", "outcome": "paid in full"}
+  ]
+}
