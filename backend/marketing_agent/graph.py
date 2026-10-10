@@ -27,8 +27,11 @@ def load_reviews(state: MarketingState) -> dict:
 def analyze_sentiment(state: MarketingState) -> dict:
     from .schemas import Review
     reviews = [Review.model_validate(r) for r in state["clean_reviews"]]
-    sentiment, warnings, count = analyze_reviews(reviews, str(get_settings().sentiment_model_path))
-    return {"sentiment": sentiment.model_dump(), "sentiment_engine": "local_distilbert" if sentiment.model_status == "available" and count else "unavailable", "sentiment_inference_count": count, "review_warnings": state["review_warnings"] + warnings}
+    settings = get_settings()
+    model_ref = settings.sentiment_model_id if settings.sentiment_model_source == "hub" else str(settings.sentiment_model_path)
+    sentiment, warnings, count = analyze_reviews(reviews, model_ref)
+    engine = "huggingface_distilbert" if settings.sentiment_model_source == "hub" else "local_distilbert"
+    return {"sentiment": sentiment.model_dump(), "sentiment_engine": engine if sentiment.model_status == "available" and count else "unavailable", "sentiment_inference_count": count, "review_warnings": state["review_warnings"] + warnings}
 
 
 def search_competitors(state: MarketingState) -> dict:
@@ -65,7 +68,7 @@ def build_report(state: MarketingState) -> dict:
     warnings = state["review_warnings"] + state["competitor_warnings"] + state["strategy_warnings"] + state["ranking_warnings"]
     engines = (state["sentiment_engine"], state["research_engine"], state["strategy_engine"])
     fixtures = "fixture" in engines
-    real = any(e in engines for e in ("local_distilbert", "tavily_live", "configured_llm"))
+    real = any(e in engines for e in ("local_distilbert", "huggingface_distilbert", "tavily_live", "configured_llm"))
     mode = "mixed" if fixtures and real else "demo" if fixtures else "live" if request.research_mode == "live" else "demo"
     complete = (len(state["ranked_campaigns"]) == 3
                 and state["research_engine"] != "unavailable"

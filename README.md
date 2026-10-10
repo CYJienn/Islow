@@ -42,7 +42,7 @@ Open `http://127.0.0.1:5173`. Vite proxies API requests to FastAPI at port `8000
 
 ## Marketing Agent
 
-The Marketing Agent is under `backend/marketing_agent/` and runs through the same backend server, dependency set, and `.env`. See [backend/README.md](backend/README.md) for setup, demo CLI, API, and test commands.
+The Marketing Agent is under `backend/marketing_agent/` and runs through the same backend server, dependency set, and `.env`. A simple test page is available at `http://127.0.0.1:5173/marketing.html` when the frontend is running. See [backend/README.md](backend/README.md) for API setup and [frontend/README.md](frontend/README.md) for page run commands.
 
 ## Presentation renderer
 

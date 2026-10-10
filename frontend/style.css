@@ -74,6 +74,8 @@ h1, h2, h3 { letter-spacing: -0.02em; }
 .hello p { color: var(--ink-2); font-size: 14px; }
 .bar-end { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip { font-size: 13px; padding: 7px 14px; border-radius: 999px; border: 0; background: #fff; box-shadow: var(--shadow); color: var(--ink-2); white-space: nowrap; }
+.marketing-nav { display: inline-flex; align-items: center; color: var(--teal-2); font-weight: 700; text-decoration: none; }
+.marketing-nav:hover { background: var(--teal-tint); }
 .chip-mode { display: inline-flex; align-items: center; gap: 6px; background: transparent; cursor: pointer; font-weight: 700; color: var(--ink); min-height: 38px; }
 .chip-mode:hover { background: var(--card-2); }
 .chip-mode[data-edit] { background: var(--ink); color: #fff; }
@@ -503,6 +505,7 @@ body.dragging .tray { opacity: 0.3; pointer-events: none; }
   .avatar { grid-area: 1 / 3; }
   .hello { grid-area: 2 / 1 / 3 / 4; min-width: 0; }
   #fresh { grid-area: 3 / 1 / 4 / 4; justify-self: start; font-size: 12px; padding: 4px 10px; }
+  .marketing-nav { grid-area: 3 / 2 / 4 / 4; justify-self: end; font-size: 12px; padding: 4px 10px; }
   .canvas { width: auto; margin: 0 10px 28px; padding: 8px; border-radius: 14px; }
   .dock { left: 50%; top: auto; bottom: max(12px, env(safe-area-inset-bottom)); translate: -50% 0; flex-direction: row; padding: 8px calc(10px + var(--grow, 0px) / 2); gap: 8px; max-width: calc(100vw - 16px); }
   .dock { --db: 44px; }

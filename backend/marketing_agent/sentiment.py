@@ -6,15 +6,27 @@ from .schemas import Review, SentimentReport
 
 @lru_cache(maxsize=2)
 def load_model(path: str):
-    model_dir = Path(path)
-    if not (model_dir / "config.json").is_file() or not any(
-        (model_dir / filename).is_file() for filename in ("model.safetensors", "pytorch_model.bin")
-    ):
-        raise FileNotFoundError("DistilBERT checkpoint config or weights absent")
+    from .config import get_settings
+
+    settings = get_settings()
+    if path == settings.sentiment_model_id:
+        model_ref = path
+        model_options = {"token": settings.hf_token or None, "trust_remote_code": False}
+    else:
+        model_ref = Path(path)
+        if not (model_ref / "config.json").is_file() or not any(
+            (model_ref / filename).is_file() for filename in ("model.safetensors", "pytorch_model.bin")
+        ):
+            raise FileNotFoundError("DistilBERT checkpoint config or weights absent")
+        model_options = {"local_files_only": True}
     import torch
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
-    tokenizer = AutoTokenizer.from_pretrained(model_dir, local_files_only=True)
-    model = AutoModelForSequenceClassification.from_pretrained(model_dir, local_files_only=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_ref, **model_options)
+    model = AutoModelForSequenceClassification.from_pretrained(model_ref, **model_options)
+    # Aggregation assumes class 0..4 means 1..5 stars.
+    expected_labels = {index: f"{index + 1}_star" for index in range(5)}
+    if model.config.num_labels != 5 or model.config.id2label != expected_labels:
+        raise ValueError("Sentiment checkpoint must have ordered labels 1_star through 5_star")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device).eval()
     return tokenizer, model, device
@@ -57,7 +69,7 @@ def analyze_reviews(reviews: list[Review], model_path: str) -> tuple[SentimentRe
         stars, batches = predict_stars([r.text for r in clean], model_path)
     except Exception as exc:
         report.excluded_count = len(reviews)
-        warnings.append(f"Local sentiment model unavailable: {type(exc).__name__}. No sentiment percentages reported.")
+        warnings.append(f"Sentiment model unavailable: {type(exc).__name__}. No sentiment percentages reported.")
         return report, warnings, 0
     report.model_status = "available"
     report.processed_count = len(stars)

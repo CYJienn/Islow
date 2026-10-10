@@ -5,6 +5,14 @@ const apiProxy = {
     target: 'http://127.0.0.1:8000',
     changeOrigin: true,
   },
+  '/health': {
+    target: 'http://127.0.0.1:8000',
+    changeOrigin: true,
+  },
+  '/marketing': {
+    target: 'http://127.0.0.1:8000',
+    changeOrigin: true,
+  },
 };
 
 export default defineConfig({
