@@ -29,7 +29,8 @@ def generate(request: AnalyzeRequest, sentiment: SentimentReport, findings: list
     for attempt in range(2):
         calls += 1
         try:
-            response = llm.invoke(prompt)
+            from app.core import usage
+            response = llm.invoke(prompt, config=usage.config())
             content = str(response.content).strip().removeprefix("```json").removesuffix("```").strip()
             data = json.loads(content)
             if isinstance(data, dict):

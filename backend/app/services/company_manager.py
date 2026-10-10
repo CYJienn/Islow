@@ -3,6 +3,8 @@
 import asyncio
 import json
 import logging
+import time
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Literal
 
@@ -12,6 +14,7 @@ from openai import APIStatusError, RateLimitError
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
+from app.core import usage
 from app.core.config import get_settings
 from app.schemas.chat import ChatRequest, ChatResponse, ChatTurn
 from app.services import financial_tool, marketing_tool
@@ -50,6 +53,12 @@ ASSIGNMENTS: dict[Domain, str] = {
 
 SKILL_PATH = Path(__file__).resolve().parents[3] / "skills" / "company-manager" / "SKILL.md"
 logger = logging.getLogger(__name__)
+_T0: ContextVar[float] = ContextVar("t0", default=0.0)
+
+
+def _log(msg: str) -> None:
+    """Progress line for the uvicorn terminal: seconds since the request started."""
+    print(f"[manager {time.perf_counter() - _T0.get():6.1f}s] {msg}", flush=True)
 
 
 class Route(BaseModel):
@@ -82,7 +91,7 @@ def _request_context(request: ChatRequest) -> str:
 async def _invoke(runnable, messages):
     for attempt in range(3):
         try:
-            return await runnable.ainvoke(messages)
+            return await runnable.ainvoke(messages, config=usage.config())
         except APIStatusError as error:
             if error.status_code != 503 or attempt == 2:
                 raise
@@ -103,6 +112,13 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
             message="Company manager is unavailable: configure OPENAI_API_KEY in backend/.env.",
         )
 
+    _T0.set(time.perf_counter())
+    usage.start()
+    mk = request.marketing
+    print("\n" + "=" * 70, flush=True)
+    _log(f"REQUEST model={get_settings().openai_model} seated={request.seated} docs={len(request.documents)} "
+         f"marketing={'business+' + str(len(mk.reviews)) + ' reviews, ' + mk.research_mode if mk and mk.business else 'none'}")
+    _log(f"TASK: {request.text[:200]}")
     manager_skill = SKILL_PATH.read_text(encoding="utf-8")
     context = _request_context(request)
     manager_rules = (
@@ -119,6 +135,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
             ],
         )
         route = Route.model_validate(route_data)
+        _log(f"ROUTE: specialists={route.specialists} invoice_assurance={route.invoice_assurance}")
     except RateLimitError:
         return ChatResponse(type="error", message="OpenAI quota was reached; the company manager could not classify this request.")
     except Exception as error:
@@ -132,6 +149,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
         domains.append("financial_operations")
     if request.seated is not None:  # only agents sitting at the table are called
         domains = [d for d in domains if AGENT[d] in request.seated]
+    _log(f"TABLE: calling {[AGENT[d] for d in domains] or 'nobody (manager answers directly)'}")
     if not domains:
         try:
             answer = await _ask(model, manager_rules + "\nAnswer this general request directly.", context)
@@ -146,6 +164,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
     marketing_partial = None
     finance_notice = None
     for domain in domains:
+        _log(f"{AGENT[domain]}: working")
         if domain == "marketing_competitor":
             marketing_request, missing = marketing_tool.prepare(request)
             if missing:
@@ -154,6 +173,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
                     return ChatResponse(type="text", message=f"Please send a complete marketing payload in your next request. Missing or invalid business fields: {needed}. Include the full business profile and any reviews; chat does not retain prior input.")
                 failures.append("marketing and competitor (missing or invalid business fields: " + needed + ")")
                 continue
+            _log("marketing: running GrowthLab (sentiment, competitor search, campaigns)")
             try:
                 report = await marketing_tool.run(marketing_request, authorization)
             except HTTPException:
@@ -162,6 +182,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
                 logger.warning("Marketing tool failed: %s", type(error).__name__)
                 failures.append("marketing and competitor")
                 continue
+            _log(f"marketing: GrowthLab finished status={report.status} warnings={len(report.warnings)}")
             findings.append("marketing_competitor GrowthLab structured report:\n" + json.dumps(report.model_dump(mode="json")))
             if report.status == "partial":
                 marketing_partial = "Marketing analysis is partial: " + "; ".join(report.warnings)
@@ -172,6 +193,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
                     context + "\n\nGrowthLab report:\n" + json.dumps(report.model_dump(mode="json")) + "\n\nAssigned subtask: " + ASSIGNMENTS[domain],
                 )
                 turns.append(ChatTurn(agent="marketing", text=text))
+                _log(f"marketing: answered ({len(text)} chars)")
             except Exception:
                 pass
             continue
@@ -198,6 +220,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
             continue
         findings.append(f"{domain}:\n{result}")
         turns.append(ChatTurn(agent=AGENT[domain], text=result))
+        _log(f"{AGENT[domain]}: answered ({len(result)} chars)")
     if not findings:
         reason = " OpenAI quota was reached." if quota_failures else ""
         return ChatResponse(
@@ -221,14 +244,17 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
             except Exception:
                 return "No change."
 
+        _log(f"RELAY: manager shares findings, asking {[AGENT[d] for d in names]} to react")
         reactions = await asyncio.gather(*(react(d) for d in names))
         heard = [(d, r) for d, r in zip(names, reactions) if not r.strip().lower().startswith("no change")]
+        _log(f"RELAY: {len(heard)} of {len(names)} reacted (rest: no change)")
         if heard:
             turns.append(ChatTurn(agent="manager", text="Here is what everyone found. Please react to each other's points."))
             for d, r in heard:
                 turns.append(ChatTurn(agent=AGENT[d], text=r))
                 findings.append(f"{d} (reaction to the others):\n{r}")
 
+    _log("SYNTHESIS: manager combining everything")
     synthesis = context + "\n\nSpecialist findings:\n" + "\n\n".join(findings)
     if failures:
         synthesis += "\n\nUnavailable specialist domains: " + ", ".join(failures)
@@ -251,4 +277,6 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
     if quota_failures:
         answer += " OpenAI quota was reached for: " + ", ".join(quota_failures) + "."
     turns.append(ChatTurn(agent="manager", text=answer))
+    _log(f"USAGE: {usage.summary()}")
+    _log(f"DONE: {len(turns)} turns, council={len(domains) > 1}, failures={failures or 'none'}")
     return ChatResponse(type="text", message=answer, council=len(domains) > 1, turns=turns)
