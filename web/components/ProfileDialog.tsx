@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { financeReportPayload } from "./FinanceReport";
 
 // Business profile for an SME owner. Demo data only; saved in this browser, and sent to the assistant as context.
 export type Profile = {
@@ -89,7 +90,7 @@ export function chatBody(p: Profile, text: string, extra: object = {}) {
   const ready = business.name && business.industry && business.location && business.products.length && business.target_customers
     && budget > 0 && business.objective && business.channels.length;
   return {
-    text, ...extra,
+    text, ...financeReportPayload(), ...extra,
     documents: ctx ? [{ source: "Business profile", content: ctx }] : [],
     ...(ready ? { marketing: { business, reviews, research_mode: "live", optional: true } } : {}), // ponytail: no reviews until the UI can take them
   };

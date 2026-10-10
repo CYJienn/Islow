@@ -2,7 +2,8 @@ from typing import Any, Literal
 
 from marketing_agent.schemas import Review
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+import json
 
 
 class ChatDocument(BaseModel):
@@ -27,6 +28,16 @@ class ChatMarketing(BaseModel):
 
 class ChatFinance(BaseModel):
     mode: Literal["configured", "demo"] = "configured"
+    report: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def validate_report(self):
+        if self.report is not None:
+            if len(json.dumps(self.report)) > 40000:
+                raise ValueError("Finance report preview exceeds 40 KB")
+            if not isinstance(self.report.get("report_id"), str) or not isinstance(self.report.get("batch_results"), dict):
+                raise ValueError("Attach a generated finance report with report_id and batch_results")
+        return self
 
 
 class ChatTurn(BaseModel):

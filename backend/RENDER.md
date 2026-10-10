@@ -18,4 +18,6 @@ The free API profile excludes optional torch/transformers and GPU dependencies. 
 
 The standalone invoice/report service on port 8090 is not included in this cloud deployment. Its synced Windows OneDrive paths, local SQLite approvals, Node artifact exporter and Telegram polling remain local. Hosted invoice reporting needs cloud document intake and persistent state; do not expose the existing localhost-only service directly.
 
+To discuss an existing invoice report on the hosted frontend, attach its generated report.json using Finance report on Home or in the meeting topic chooser. The browser sends a summary preview with the next chat request, not the invoice documents. Seat the Finance and Ops lead and ask it to discuss invoice results. Its answer uses the report ID, match/mismatch/fully verified counts and separate supplied/test suspected exposure totals. This is a user-attached snapshot, not a fresh cloud analysis, confirmed fraud finding or payment approval. Attach a new report after re-running the local processor. The selection stays only in this tab's memory and clears on refresh.
+
 Render free instances sleep when idle and have ephemeral files. This deployment stores no uploaded invoices on the server.
