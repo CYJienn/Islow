@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services import marketing_tool
+from app.services import financial_tool, marketing_tool
 
 Domain = Literal["financial_operations", "marketing_competitor", "legal_compliance"]
 
@@ -46,6 +46,7 @@ class Route(BaseModel):
     specialists: list[Domain] = Field(
         description="Every specialist domain needed to answer the request; empty for general-only requests"
     )
+    invoice_assurance: bool = Field(default=False, description="Whether the task asks to check invoices against finance source records")
 
 
 def _model() -> ChatGoogleGenerativeAI | None:
@@ -103,7 +104,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
         route_data = await _invoke(
             model.with_structured_output(schema=Route.model_json_schema(), method="json_schema"),
             [
-                SystemMessage(content=manager_rules + "\nClassify the task. Include every relevant specialist domain."),
+                SystemMessage(content=manager_rules + "\nClassify the task. Include every relevant specialist domain. Set invoice_assurance true when the user asks to check invoices against finance source records."),
                 HumanMessage(content=context),
             ],
         )
@@ -117,6 +118,8 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
     domains = list(dict.fromkeys(route.specialists))
     if request.marketing is not None and "marketing_competitor" not in domains:
         domains.append("marketing_competitor")
+    if request.finance is not None and "financial_operations" not in domains:
+        domains.append("financial_operations")
     if not domains:
         try:
             answer = await _ask(model, manager_rules + "\nAnswer this general request directly.", context)
@@ -128,6 +131,7 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
     failures = []
     quota_failures = []
     marketing_partial = None
+    finance_notice = None
     for domain in domains:
         if domain == "marketing_competitor":
             marketing_request, missing = marketing_tool.prepare(request)
@@ -149,6 +153,15 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
             if report.status == "partial":
                 marketing_partial = "Marketing analysis is partial: " + "; ".join(report.warnings)
             continue
+        if domain == "financial_operations" and (request.finance is not None or route.invoice_assurance):
+            try:
+                report = await financial_tool.run(request.finance.mode if request.finance else "configured")
+                findings.append("financial_operations invoice assurance tool report:\n" + json.dumps(report))
+                if report["status"] != "completed":
+                    finance_notice = "Invoice assurance " + report["status"] + ": " + "; ".join(report["warnings"])
+            except Exception as error:
+                logger.warning("Financial tool failed: %s", type(error).__name__)
+                finance_notice = "Invoice assurance is unfinished because the finance tool failed."
         try:
             result = await _ask(
                 model,
@@ -186,6 +199,8 @@ async def respond(request: ChatRequest, authorization: str | None = None) -> Cha
         answer += "\n\nUnfinished specialist analysis: " + ", ".join(failures) + "."
     if marketing_partial:
         answer += "\n\n" + marketing_partial
+    if finance_notice:
+        answer += "\n\n" + finance_notice
     if quota_failures:
         answer += " Gemini quota was reached for: " + ", ".join(quota_failures) + "."
     return ChatResponse(type="text", message=answer)

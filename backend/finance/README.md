@@ -4,6 +4,10 @@ For the current simple OneDrive → document intake/OCR → checks → dashboard
 
 Imported from `C:\Users\chuay\WorkBuddy AI` on 2026-10-10. This is a separate, local finance service on port 8090; the Kaunter FastAPI service and Vite frontend remain separate applications.
 
+## Company manager integration
+
+`POST /api/v1/chat` can run the deterministic invoice checks directly through `app/services/financial_tool.py`. The manager uses the workbook and invoice folder configured by `FINANCE_WORKBOOK` and `FINANCE_INVOICE_INPUT_DIR` in `backend/.env`, falling back to `config.json`. A `finance` payload with `mode: demo` runs a labeled synthetic example. The adapter runs in a worker thread and returns a bounded summary, source references, exceptions, and limitations. It does not create report snapshots, send notifications, approve distribution, or run the optional GPT risk review. The standalone service remains responsible for those separate workflows. Chat text documents are context for the manager, not invoice files for the assurance engine.
+
 ## Layout
 
 - `engine.py`, `fixtures.py`: deterministic checks and separately labelled synthetic cases.
@@ -33,7 +37,7 @@ Other manual commands:
 .\START.ps1 -Command run
 .\START.ps1 -Command status
 .\START.ps1 -Command connections
-python -m unittest discover -s . -p test_backend.py
+python -m unittest discover -s . -p 'test_*.py'
 ```
 
 `run` creates a draft report without approving or sending it. Configuration input paths resolve relative to `config.json`. Change the workbook there to analyze a different batch. The supplied workbook has invoice headers; complete line-level three-way matching cannot be established without invoice-line evidence. Missing evidence stays UNKNOWN. Synthetic test cases remain separate from supplied invoices.

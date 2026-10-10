@@ -1,5 +1,8 @@
 """Batch verdicts and deduplicated suspected exposure, with tests kept explicit."""
-from engine import summarize
+try:
+    from .engine import summarize
+except ImportError:
+    from engine import summarize
 
 
 def batch_results(cases):
