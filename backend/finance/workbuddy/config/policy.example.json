@@ -1,0 +1,8 @@
+{
+  "demo_myr_rounding_allowance": "0.02",
+  "production_price_tolerance": null,
+  "scheduling_enabled": false,
+  "baseline_minutes_per_invoice": null,
+  "hourly_cost": null,
+  "cost_currency": null
+}

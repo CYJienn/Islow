@@ -1,0 +1,61 @@
+{
+  "tables": {
+    "invoices": {
+      "sheet": "invoices",
+      "columns": {}
+    },
+    "invoice_lines": {
+      "sheet": "invoice_lines",
+      "columns": {}
+    },
+    "vendors": {
+      "sheet": "vendors",
+      "columns": {}
+    },
+    "po_headers": {
+      "sheet": "po_headers",
+      "columns": {}
+    },
+    "po_lines": {
+      "sheet": "po_lines",
+      "columns": {}
+    },
+    "receipts": {
+      "sheet": "receipts",
+      "columns": {}
+    },
+    "allocations": {
+      "sheet": "allocations",
+      "columns": {}
+    },
+    "gl_accounts": {
+      "sheet": "gl_accounts",
+      "columns": {}
+    },
+    "approval_authority": {
+      "sheet": "approval_authority",
+      "columns": {}
+    },
+    "approval_decisions": {
+      "sheet": "approval_decisions",
+      "columns": {}
+    },
+    "pricing_conditions": {
+      "sheet": "pricing_conditions",
+      "columns": {}
+    },
+    "tax_rules": {
+      "sheet": "tax_rules",
+      "columns": {}
+    },
+    "fx_rates": {
+      "sheet": "fx_rates",
+      "columns": {}
+    },
+    "bank_verifications": {
+      "sheet": "bank_verifications",
+      "columns": {}
+    }
+  },
+  "instructions": "Replace sheet names and explicitly map canonical_field to exact_source_column. Missing optional sheets remain empty. Invoices requires invoice_id (or stable composite), vendor_id, invoice_number, invoice_date, amount, currency; do not fabricate invoice_lines."
+}

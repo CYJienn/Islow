@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "batch_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "business_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "invoice_id": {
+      "type": "string"
+    },
+    "domain": {
+      "enum": [
+        "intake",
+        "matching",
+        "fraud",
+        "accounting"
+      ]
+    },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "PASS",
+              "FAIL",
+              "UNKNOWN",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "observed_value": {},
+          "expected_value": {},
+          "explanation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recommended_action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_class": {
+            "enum": [
+              "CONFIRMED",
+              "INFERRED_CANDIDATE",
+              "MISSING"
+            ]
+          },
+          "severity": {
+            "enum": [
+              "INFO",
+              "MEDIUM",
+              "HIGH"
+            ]
+          }
+        },
+        "required": [
+          "rule_id",
+          "status",
+          "source_refs",
+          "observed_value",
+          "expected_value",
+          "explanation",
+          "recommended_action",
+          "evidence_class",
+          "severity"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "PASS"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "source_refs": {
+                  "minItems": 1
+                },
+                "evidence_class": {
+                  "const": "CONFIRMED"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "completed_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "batch_id",
+    "business_id",
+    "invoice_id",
+    "domain",
+    "input_hash",
+    "findings",
+    "errors",
+    "completed_at"
+  ],
+  "additionalProperties": false
+}

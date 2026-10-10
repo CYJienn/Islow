@@ -1,0 +1,10 @@
+{
+  "tables": {
+    "invoices": {"sheet": "RBKP_Invoice", "columns": {"invoice_id": "BELNR", "fiscal_year": "GJAHR", "invoice_number": "XBLNR", "vendor_id": "LIFNR", "po_id": "EBELN", "invoice_date": "BLDAT", "currency": "WAERS", "amount": "WRBTR", "bank_account": "BANK_ON_INV", "gl_account": "GL_CODE"}},
+    "vendors": {"sheet": "LFA1_Vendor_Master", "columns": {"vendor_id": "LIFNR", "bank_account": "BANKN", "currency": "WAERS"}},
+    "po_headers": {"sheet": "EKKO_PO_Header", "columns": {"po_id": "EBELN", "vendor_id": "LIFNR", "company_code": "BUKRS", "currency": "WAERS"}},
+    "po_lines": {"sheet": "EKPO_PO_Item", "columns": {"po_id": "EBELN", "po_line_id": "EBELP", "quantity": "MENGE", "price_amount": "NETPR", "price_unit": "PEINH", "uom": "MEINS"}},
+    "receipts": {"sheet": "MSEG_Goods_Receipt", "columns": {"po_id": "EBELN", "po_line_id": "EBELP", "quantity": "MENGE", "sap_movement_type": "BWART", "receipt_date": "BUDAT", "uom": "MEINS"}},
+    "gl_accounts": {"sheet": "SKA1_GL_Master", "columns": {"gl_account": "SAKNR"}}
+  }
+}
