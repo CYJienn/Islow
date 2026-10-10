@@ -171,3 +171,4 @@ xxhash==4.0.1
 yarl==1.25.1
 zipp==4.1.1 ; python_full_version < '3.12'
 zstandard==0.25.0
+langchain-openai==1.7.0
