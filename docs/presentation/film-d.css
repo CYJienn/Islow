@@ -1,0 +1,59 @@
+/* Cut D "Make it yours": white / teal / gray. Film-side styling only; the product itself is shown through its real UI. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=block');
+:root {
+  --bg: #f1f4f4; --paper: #ffffff; --ink: #0e1f1f; --ink2: #5b6a6a; --gray: #9aa7a7; --line: #d9e0e0;
+  --teal: #0d9488; --teal-d: #0f766e; --teal-l: #5eead4; --tint: #d8f1ee; --dark: #0f2a29;
+}
+html, body { background: #e6ecec; }
+body { font-family: 'Inter', system-ui, sans-serif; color: var(--ink); }
+#stage { background: var(--bg); }
+.flash { mix-blend-mode: normal; }
+.dots { background-image: radial-gradient(circle, rgba(15, 42, 41, 0.16) 2px, transparent 3px); opacity: 0.6; }
+.words { color: var(--ink); text-shadow: none; font-weight: 800; letter-spacing: -0.035em; }
+.green, .sky { color: var(--teal); } .orange { color: var(--gray); }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.px { image-rendering: pixelated; position: absolute; left: 0; top: 0; }
+.fx-abs { position: absolute; left: 0; top: 0; opacity: 0; }
+.pix { position: absolute; left: 0; top: 0; opacity: 0; }
+
+/* hook */
+.nt { position: absolute; left: 0; top: 0; width: 470px; padding: 18px 22px; border-radius: 20px; background: var(--paper); box-shadow: 0 0 0 1.5px var(--line), 0 26px 44px -22px rgba(15, 42, 41, 0.35); display: flex; gap: 16px; align-items: center; opacity: 0; }
+.nt i { flex: none; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 6px rgba(14, 31, 31, 0.1); }
+.nt.am i { background: var(--teal); box-shadow: 0 0 0 6px rgba(13, 148, 136, 0.18); }
+.nt b { display: block; font-size: 27px; line-height: 1.15; font-weight: 700; }
+.nt span { display: block; font-size: 19px; color: var(--ink2); margin-top: 3px; }
+.badge99 { position: absolute; min-width: 92px; height: 92px; padding: 0 22px; border-radius: 46px; background: var(--ink); color: #fff; font-weight: 800; font-size: 50px; display: grid; place-items: center; box-shadow: 0 0 0 10px rgba(14, 31, 31, 0.12); opacity: 0; }
+
+/* logo */
+.wm { position: absolute; display: flex; align-items: center; gap: 36px; transform: translate(-50%, -50%); white-space: nowrap; opacity: 0; }
+.kmark { flex: none; width: 190px; height: 190px; border-radius: 50%; background: var(--teal); color: #fff; font-weight: 800; font-size: 104px; display: grid; place-items: center; box-shadow: 0 0 0 12px rgba(13, 148, 136, 0.18); }
+.wm b { font-size: 190px; font-weight: 800; letter-spacing: -0.05em; line-height: 1; }
+.mini { position: absolute; left: 60px; top: 56px; display: flex; align-items: center; gap: 14px; opacity: 0; }
+.mini .kmark { width: 52px; height: 52px; font-size: 28px; box-shadow: none; }
+.mini b { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; }
+
+/* captions */
+.cap { position: absolute; left: 960px; top: 1008px; transform: translate(-50%, -50%); display: flex; gap: 0 0.3em; padding: 14px 40px 16px; border-radius: 999px; background: var(--paper); box-shadow: 0 0 0 1.5px var(--line), 0 24px 46px -20px rgba(15, 42, 41, 0.4); font-size: 46px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; opacity: 0; }
+.cap span { display: inline-block; opacity: 0; }
+.cap .g { color: var(--teal); } .cap .b { color: var(--gray); }
+
+/* app window */
+.win.kn { border-radius: 22px; background: var(--bg); box-shadow: 0 50px 100px -34px rgba(15, 42, 41, 0.55), 0 0 0 1.5px var(--line); }
+
+/* WorkBuddy shelf + skill chips (dark ink so they read as a different source from the teal Kaunter UI) */
+.shelf { position: absolute; left: 40px; top: 210px; width: 440px; height: 440px; border-radius: 28px; background: rgba(255, 255, 255, 0.7); box-shadow: inset 0 0 0 2px var(--dark); opacity: 0; }
+.shelf .hd { position: absolute; left: 26px; top: 20px; display: flex; align-items: center; gap: 12px; font-size: 30px; font-weight: 800; }
+.shelf .hd i { width: 14px; height: 14px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 5px rgba(13, 148, 136, 0.25); }
+.shelf .hd em { font-style: normal; color: var(--ink2); font-weight: 600; font-size: 24px; }
+.slot { position: absolute; left: 20px; width: 400px; height: 92px; border-radius: 22px; border: 2px dashed var(--gray); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: var(--teal-d); }
+.skill { position: absolute; left: 0; top: 0; width: 400px; height: 92px; padding: 0 22px; border-radius: 22px; background: var(--dark); color: #fff; display: flex; align-items: center; gap: 18px; box-shadow: 0 20px 36px -16px rgba(15, 42, 41, 0.7); opacity: 0; }
+.skill b { display: block; font-size: 28px; font-weight: 800; font-family: 'JetBrains Mono', monospace; letter-spacing: -0.03em; color: var(--teal-l); }
+.skill span { display: block; font-size: 18px; font-weight: 600; color: #b8c9c8; margin-top: 2px; }
+.tether { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; }
+.name { position: absolute; padding: 8px 18px; border-radius: 999px; font-size: 26px; font-weight: 700; background: var(--paper); box-shadow: 0 0 0 1.5px var(--teal), 0 14px 28px -14px rgba(15, 42, 41, 0.5); white-space: nowrap; opacity: 0; transform: translate(0, -50%); }
+.name b { color: var(--teal); }
+
+/* interstitial */
+.veil { position: absolute; inset: 0; background: rgba(241, 244, 244, 0.96); opacity: 0; }
+.cursor { filter: drop-shadow(0 5px 7px rgba(15, 42, 41, 0.45)); }
+.ring { border-color: var(--teal); }
