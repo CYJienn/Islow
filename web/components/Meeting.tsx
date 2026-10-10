@@ -1,13 +1,47 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Buddy, { Crown } from "./Buddy";
-import { agents, questions, script } from "@/lib/data";
+import { agents, questions, script, type Turn } from "@/lib/data";
+import { chatBody, loadProfile } from "./ProfileDialog";
 
 // Seat centres as % of the room (top, right, bottom, left of the table).
-const SEATS = [{ x: 50, y: 15 }, { x: 82, y: 50 }, { x: 50, y: 85 }, { x: 18, y: 50 }];
+const SEATS = [{ x: 50, y: 16 }, { x: 84, y: 50 }, { x: 64, y: 84 }, { x: 36, y: 84 }, { x: 16, y: 50 }];
+// Which edge each sofa has its back against. Every sofa faces the table.
+const SIDE = ["top", "right", "bottom", "bottom", "left"] as const;
 const byId = (id: string) => agents.find((a) => a.id === id)!;
 
 const WALK_MS = 2200;
+export type ApiTurn = { agent: string; text: string };
+const short = (t: string) => (t.length > 180 ? t.slice(0, 177).trimEnd() + "…" : t);
+
+// Manager opens, each specialist reports back, manager closes. These are the backend's real answers.
+function toPlan(q: string, turns: ApiTurn[]): Turn[] {
+  const first = turns.find((t) => t.agent !== "manager")?.agent ?? "manager";
+  return [
+    { from: "manager", to: first, act: "point", text: `Team, the question is: ${q}` },
+    ...turns.map((t): Turn => t.agent === "manager"
+      ? { from: "manager", to: first, act: "stand", text: t.text }
+      : { from: t.agent, to: "manager", act: "throw", text: t.text }),
+  ];
+}
+
+// Top-down 2D sofa: backrest, two arms, two cushions. Drawn once facing down, then rotated per side.
+function Sofa({ side }: { side: (typeof SIDE)[number] }) {
+  const flat = side === "top" || side === "bottom";
+  const [w, h] = flat ? [220, 120] : [120, 220];
+  const t = { top: "", bottom: "translate(220 120) rotate(180)", left: "translate(0 220) rotate(-90)", right: "translate(120 0) rotate(90)" }[side];
+  return (
+    <svg className="sofa" viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+      <g transform={t}>
+        <rect className="part" x="0" y="0" width="220" height="26" rx="12" />
+        <rect className="part" x="0" y="10" width="26" height="110" rx="12" />
+        <rect className="part" x="194" y="10" width="26" height="110" rx="12" />
+        <rect className="part" x="30" y="30" width="75" height="86" rx="10" />
+        <rect className="part" x="115" y="30" width="75" height="86" rx="10" />
+      </g>
+    </svg>
+  );
+}
 
 // Walks in from the nearest side of the room on 16 pixel-steps, then sits down.
 function Walker({ id, dx }: { id: string; dx: number }) {
@@ -51,19 +85,36 @@ function Bubble({ text, side, listen }: { text: string; side: "l" | "r"; listen?
     : <div className={`pbox say ${side}`}>{text.slice(0, n)}</div>;
 }
 
-export default function Meeting() {
-  const [seats, setSeats] = useState<(string | null)[]>([null, null, null, null]);
+export default function Meeting({ council }: { council?: { question: string; answer: string; turns?: ApiTurn[] } | null }) {
+  const [seats, setSeats] = useState<(string | null)[]>(council ? agents.map((a) => a.id) : SEATS.map(() => null));
   const [turn, setTurn] = useState(-1);
   const [playing, setPlaying] = useState(false);
-  const [sched, setSched] = useState(false);
-  const [ask, setAsk] = useState(false);
   const [topic, setTopic] = useState("");
   const [custom, setCustom] = useState("");
+  const [live, setLive] = useState<Turn[] | null>(null); // the manager's real turns; null = play the demo script
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
   const logRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false); // a character is being dragged: light up the free sofas
+  const [over, setOver] = useState<number | null>(null);
+  // Character column: collapsed to icons, opens on hover, closes as soon as the pointer leaves (never mid-drag).
+  const [teamOpen, setTeamOpen] = useState(false);
+  const dragRef = useRef(false);
+  dragRef.current = dragging;
+  const openTeam = () => setTeamOpen(true);
+  const closeTeam = () => { if (!dragRef.current) setTeamOpen(false); }; // stays open while a character is being dragged
+  const [now, setNow] = useState(() => new Date());
+  const [started, setStarted] = useState<Date | null>(null);
+  const [ended, setEnded] = useState<Date | null>(null);
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => { if (!playing && started) setEnded((e) => e ?? new Date()); }, [playing, started]);
+  const hhmm = (d: Date) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const secs = started ? Math.max(0, Math.round(((ended ?? now).getTime() - started.getTime()) / 1000)) : 0;
+  const elapsed = `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
 
   const seated = seats.filter(Boolean) as string[];
-  const plan = script.filter((t) => seated.includes(t.from) && seated.includes(t.to));
+  const plan = (live ?? script).filter((t) => seated.includes(t.from) && seated.includes(t.to));
   const seatOf = (id: string) => SEATS[seats.indexOf(id)];
   const cur = playing && turn >= 0 ? plan[turn] : undefined;
 
@@ -82,43 +133,115 @@ export default function Meeting() {
 
   useEffect(() => { logRef.current?.scrollTo({ top: 1e6, behavior: "smooth" }); }, [turn]);
 
+  // Called from chat: everyone walks in, then the question is put to the table.
+  useEffect(() => {
+    if (!council) return;
+    const t = setTimeout(() => start(council.question), WALK_MS + 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const on = () => setDragging(true), off = () => { setDragging(false); setOver(null); };
+    addEventListener("dragstart", on); addEventListener("dragend", off); addEventListener("drop", off);
+    return () => { removeEventListener("dragstart", on); removeEventListener("dragend", off); removeEventListener("drop", off); };
+  }, []);
+
   const seat = (i: number, id: string) =>
     setSeats((s) => s.map((x, j) => (j === i ? id : x === id ? null : x)));
 
-  const start = (q: string) => { setTopic(q); setAsk(false); setCustom(""); setTurn(0); setPlaying(true); };
+  // Download the finished session as a Markdown report: topic, times, who was there, the discussion, the manager's answer.
+  const report = () => {
+    if (!started) return;
+    const lines = [
+      "# Session report", "",
+      `- **Topic:** ${topic}`,
+      `- **Date:** ${started.toLocaleDateString()}`,
+      `- **Started:** ${hhmm(started)}`,
+      `- **Duration:** ${elapsed}`,
+      `- **At the table:** ${seated.map((id) => byId(id).name).join(", ")}`,
+      "", "## Discussion", "",
+      ...plan.slice(0, turn + 1).map((t) => `- **${byId(t.from).name} → ${byId(t.to).name}:** ${t.text}`),
+      ...(council && !live ? ["", "## Manager's answer", "", council.answer] : []),
+      "",
+    ];
+    const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/markdown" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `session-report-${started.toISOString().slice(0, 10)}-${hhmm(started).replace(":", "")}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Put the topic to the manager (POST /api/v1/chat). If the backend is down, play the demo script instead.
+  const start = async (q: string) => {
+    setTopic(q); setCustom(""); setTurn(-1); setStarted(new Date()); setEnded(null); setNote(""); setBusy(true);
+    let turns: ApiTurn[] | undefined = council && council.question === q ? council.turns : undefined;
+    if (!turns?.length) {
+      try {
+        const r = await fetch("/api/v1/chat", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(chatBody(loadProfile(), q, { seated })),
+        });
+        const d = await r.json();
+        if (d.type === "error") setNote(d.message);
+        turns = d.turns;
+      } catch { setNote("The backend is not reachable, so this is the demo script."); }
+    }
+    setLive(turns?.length ? toPlan(q, turns) : null);
+    setBusy(false); setTurn(0); setPlaying(true);
+  };
 
   return (
+    <>
+    <aside className="session">
+      <div className="session-head">
+        <span className="label">Session</span>
+        {playing && <span className="chip live"><i className="dot" aria-hidden="true" />Live</span>}
+      </div>
+      <h1 className="topic-big">{topic || "No topic yet"}</h1>
+      {!playing && (
+        <div className="chooser">
+          <span className="label">Choose a topic</span>
+          <form onSubmit={(e) => { e.preventDefault(); if (custom.trim()) { setTopic(custom.trim()); setCustom(""); } }}>
+            <input value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Type your own topic" aria-label="Your topic" />
+            <button disabled={!custom.trim()}>Set</button>
+          </form>
+          <div className="bank">
+            {questions.map((q) => <button key={q} className={q === topic ? "picked" : ""} onClick={() => setTopic(q)}>{q}</button>)}
+          </div>
+          <p className="session-hint">
+            {seated.length < 2 ? "Seat at least two characters." : !topic ? "Pick or type a topic, then press Start talking." : "Ready. Press Start talking."}
+          </p>
+        </div>
+      )}
+      <div className="session-time">
+        <span className="label">Time</span>
+        <b className="num clock">{hhmm(now)}</b>
+        <dl>
+          <div><dt>Started</dt><dd className="num">{started ? hhmm(started) : "—"}</dd></div>
+          <div><dt>Elapsed</dt><dd className="num">{elapsed}</dd></div>
+          <div><dt>At the table</dt><dd className="num">{seated.length} of {agents.length}</dd></div>
+        </dl>
+      </div>
+    </aside>
     <main className="meeting">
       <div className="room" ref={roomRef}>
         <div className="chips">
-          <span className={`chip ${playing ? "live" : ""}`}>{playing ? "Meeting now" : "Table is quiet"}</span>
           <span className="chip">Next standup meeting: 20:00</span>
+          {playing && <span className="chip live"><i className="dot" aria-hidden="true" />Table is busy</span>}
         </div>
 
         <div className="controls">
-          <button className="btn primary" disabled={seated.length < 2} onClick={playing ? () => setPlaying(false) : () => setAsk(true)}>
-            {playing ? "Stop talking" : "Start talking"}
+          <button className={`btn ${playing ? "stop" : "go"}`} disabled={busy || (!playing && (seated.length < 2 || !topic))} onClick={playing ? () => setPlaying(false) : () => start(topic)}>
+            {busy ? "Team is thinking…" : playing ? "Stop talking" : "Start talking"}
           </button>
-          <button className={`btn ${sched ? "on" : ""}`} disabled={!seated.length} onClick={() => setSched((v) => !v)}>
-            Next schedule
+          <button className="btn" disabled={!started || playing} onClick={report} title={started ? "Download this session as a report" : "Run a session first"}>
+            Generate report
           </button>
         </div>
 
-        {ask && (
-          <div className="ask" onClick={() => setAsk(false)}>
-            <div className="pbox ask-box" onClick={(e) => e.stopPropagation()}>
-              <b>What should the team discuss?</b>
-              <form onSubmit={(e) => { e.preventDefault(); if (custom.trim()) start(custom.trim()); }}>
-                <input autoFocus value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Type your own topic or question" aria-label="Your topic" />
-                <button disabled={!custom.trim()}>Ask</button>
-              </form>
-              <span className="or">or pick one:</span>
-              <div className="bank">{questions.map((q) => <button key={q} onClick={() => start(q)}>{q}</button>)}</div>
-            </div>
-          </div>
-        )}
-
-        <div className="table">{seated.length === 0 && <em>Drag the characters from the sidebar onto a seat</em>}</div>
+        <div className="table">{seated.length === 0 && <em>Drag a character from the sidebar onto a sofa, or tap an empty sofa</em>}</div>
 
         {cur && cur.act === "throw" && (
           <div
@@ -135,24 +258,30 @@ export default function Meeting() {
           const a = id ? byId(id) : null;
           const standing = !!cur && cur.from === id;
           const target = !!cur && cur.to === id;
+          const spare = agents.find((x) => !seats.includes(x.id)); // tapping an empty sofa seats the next free character
           return (
             <div
               key={i}
-              className={`seat ${a ? "taken" : ""} ${standing ? "standing" : ""} ${target ? "target" : ""}`}
+              className={`seat ${SIDE[i]} ${a ? "taken" : "free"} ${standing ? "standing" : ""} ${target ? "target" : ""} ${dragging && !a ? "ready" : ""} ${over === i ? "over" : ""}`}
               style={{ left: `${p.x}%`, top: `${p.y}%` }}
               onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); const d = e.dataTransfer.getData("text/plain"); if (d) seat(i, d); }}
+              onDragEnter={() => setOver(i)}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(null); }}
+              onDrop={(e) => { e.preventDefault(); const d = e.dataTransfer.getData("text/plain"); if (d) seat(i, d); setOver(null); setDragging(false); }}
+              onClick={() => { if (!a && spare) seat(i, spare.id); }}
             >
-              {a ? (
-                <>
-                  <Walker key={`${a.id}-${i}`} id={a.id} dx={((p.x < 50 ? -8 : p.x > 50 ? 108 : -8) - p.x) * (roomRef.current?.clientWidth ?? 800) / 100} />
-                  <b>{a.name}</b>
-                  <button className="x" aria-label={`Remove ${a.name}`} onClick={() => setSeats((s) => s.map((v, j) => (j === i ? null : v)))}>×</button>
-                  {standing && cur && <Bubble key={turn} text={cur.text} side={p.x > 50 ? "l" : "r"} />}
-                  {target && <Bubble key={`t${turn}`} text="" listen side={p.x > 50 ? "l" : "r"} />}
-                  {sched && <span className="next">{a.next}</span>}
-                </>
-              ) : <span className="empty">Drop here</span>}
+              <Sofa side={SIDE[i]} />
+              <div className="sitter">
+                {a ? (
+                  <>
+                    <Walker key={`${a.id}-${i}`} id={a.id} dx={((p.x < 50 ? -8 : p.x > 50 ? 108 : -8) - p.x) * (roomRef.current?.clientWidth ?? 800) / 100} />
+                    <b>{a.name}</b>
+                    <button className="x" aria-label={`Remove ${a.name}`} onClick={(e) => { e.stopPropagation(); setSeats((s) => s.map((v, j) => (j === i ? null : v))); }}>×</button>
+                    {standing && cur && <Bubble key={turn} text={short(cur.text)} side={p.x > 50 ? "l" : "r"} />}
+                    {target && <Bubble key={`t${turn}`} text="" listen side={p.x > 50 ? "l" : "r"} />}
+                  </>
+                ) : <span className="empty"><i>+</i>Drop here</span>}
+              </div>
             </div>
           );
         })}
@@ -161,6 +290,8 @@ export default function Meeting() {
       <div className="transcript" ref={logRef}>
         {!playing && turn < 0 && <p className="hint">{seated.length < 2 ? "Seat at least two agents, then press Start talking." : "Press Start talking."}</p>}
         {topic && turn >= 0 && <p className="topic"><b>Question</b> {topic}</p>}
+        {note && <p className="hint">{note}</p>}
+        {council && !live && !playing && turn >= 0 && <p className="topic answer"><b>Manager</b> {council.answer}</p>}
         {plan.slice(0, turn + 1).map((t, i) => (
           <p key={i} className={i === turn && playing ? "now" : ""}>
             <b>{byId(t.from).name}</b> <span className="arrow">→ {byId(t.to).name}</span> {t.text}
@@ -168,5 +299,35 @@ export default function Meeting() {
         ))}
       </div>
     </main>
+    <div className="team-slot">
+      <aside
+        className={`team ${teamOpen ? "open" : ""}`}
+        onPointerEnter={openTeam}
+        onPointerLeave={closeTeam}
+        onFocus={openTeam}
+        onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) closeTeam(); }}
+      >
+        <span className="label">Characters</span>
+        <p className="session-hint">Drag one onto a sofa, or tap to seat it.</p>
+        {agents.map((a) => {
+          const at = seated.includes(a.id);
+          return (
+            <button
+              key={a.id}
+              className={`member ${at ? "at" : ""}`}
+              draggable
+              title={a.name}
+              onDragStart={(e) => { e.dataTransfer.setData("text/plain", a.id); openTeam(); }}
+              onDragEnd={() => setTeamOpen(false)}
+              onClick={() => { const i = seats.indexOf(null); if (!at && i >= 0) seat(i, a.id); }}
+            >
+              <Buddy id={a.id} size={48} />
+              <span><b>{a.name}</b><small>{at ? "At the table" : a.role}</small></span>
+            </button>
+          );
+        })}
+      </aside>
+    </div>
+    </>
   );
 }

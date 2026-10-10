@@ -3,7 +3,7 @@
 import sys
 
 from fastapi.testclient import TestClient
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
 from app.main import app
 from app.services import company_manager
@@ -26,7 +26,7 @@ async def traced_ask(model, instructions: str, context: str) -> str:
 
 company_manager._ask = traced_ask
 
-original_structured = ChatGoogleGenerativeAI.with_structured_output
+original_structured = ChatOpenAI.with_structured_output
 
 
 class TracedRunnable:
@@ -45,7 +45,7 @@ def traced_structured(self, *args, **kwargs):
     return TracedRunnable(original_structured(self, *args, **kwargs))
 
 
-ChatGoogleGenerativeAI.with_structured_output = traced_structured
+ChatOpenAI.with_structured_output = traced_structured
 
 samples = [
     ("general", {"text": "What is an invoice? Answer in one sentence."}),

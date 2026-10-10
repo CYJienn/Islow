@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     sentiment_model_id: str = "KaiHuang05/growthlab-sentiment-yelp-tuned"
     hf_token: str = ""
     tavily_api_key: str = ""
-    google_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
     marketing_api_token: str = ""
     max_reviews: int = 200
     max_search_queries: int = 3

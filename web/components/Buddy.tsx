@@ -5,6 +5,7 @@ const SKINS: Record<string, Skin> = {
   manager:   { w: "#f4f7ff", s: "#b9c4dd", eye: "#3ee6b0", acc: "#ff7aa8", marks: [[7, 12], [8, 12], [7, 13], [8, 13]] },   // tie
   marketing: { w: "#ffd6e6", s: "#f0a3c3", eye: "#ff4d8d", acc: "#ff3d81", marks: [[2, 1], [3, 1], [2, 2], [3, 2]] },         // ear bow
   finance:   { w: "#fff0b8", s: "#d9b95c", eye: "#ffc400", acc: "#e08a00", marks: [[7, 12], [8, 12]] },                     // coin
+  legal:     { w: "#e9defc", s: "#b49ae6", eye: "#8a5cff", acc: "#5b2fc9", marks: [[7, 12], [8, 12], [6, 13], [9, 13]] },     // scales
   assistant: { w: "#d4e6ff", s: "#8fb0e6", eye: "#4aa8ff", acc: "#3b6fe0", marks: [[1, 9], [1, 10], [2, 10], [12, 9]] },       // headset mic
 };
 
