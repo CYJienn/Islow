@@ -41,7 +41,26 @@ uv run pytest
 python -m pip install -r requirements.txt
 ```
 
-Set `OPENAI_API_KEY` before invoking an agent. LangSmith tracing is disabled by default and can be enabled through the variables documented in `.env.example`.
+Copy `.env.example` to `.env` and set `GOOGLE_API_KEY` there before invoking an agent. Do not commit `.env`. LangSmith tracing is disabled by default and can be enabled through the variables documented in `.env.example`.
+
+## Company manager chat
+
+`POST /api/v1/chat` keeps `/create` widget commands and routes other messages to the company manager. The manager classifies the request, calls the relevant financial and operations, marketing and competitor, or legal and compliance specialist Gemini model for each part, then combines their findings. Set `GOOGLE_API_KEY` and optionally `GEMINI_MODEL` in `.env` to enable it.
+
+The request may include up to five source-labeled text documents:
+
+```json
+{
+  "text": "Review our cash flow and compliance risks",
+  "documents": [
+    { "source": "Monthly report", "content": "Revenue: RM 1,000; expenses: RM 900." }
+  ]
+}
+```
+
+Documents are supplied as text in the request; file upload and persistent skill editing are not implemented. For feedback about a specialist, the manager can propose a skill change for approval but cannot apply it through this API yet.
+
+To send demo requests through the API with the configured Gemini key, run `python smoke_manager.py` from `backend/`. It prints which specialists were called and a sample of each answer. Run one case with `python smoke_manager.py "mixed domains"`. These are live API calls and use your Gemini quota.
 
 ## Structure
 
