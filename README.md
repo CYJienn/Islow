@@ -16,7 +16,7 @@ docs/          Product, design, research, and handoff documents
 From `backend/`, create an environment and install the project. The commands below use `uv`; standard `venv` and `pip` also work.
 
 ```powershell
-uv sync --dev
+uv sync --dev --python 3.11
 Copy-Item .env.example .env
 uv run python run.py
 ```
@@ -39,6 +39,10 @@ npm run dev
 ```
 
 Open `http://127.0.0.1:5173`. Vite proxies API requests to FastAPI at port `8000`. See `frontend/README.md` and `backend/README.md` for complete setup, build, and test instructions.
+
+## Marketing Agent
+
+The Marketing Agent is under `backend/marketing_agent/` and runs through the same backend server, dependency set, and `.env`. See [backend/README.md](backend/README.md) for setup, demo CLI, API, and test commands.
 
 ## Presentation renderer
 

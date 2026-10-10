@@ -1,0 +1,8 @@
+[
+  {
+    "evidence_id": "competitor-001", "competitor": "Illustrative campus cafe",
+    "fact": "Demo fixture: an illustrative cafe advertises a student coffee bundle. This is not a current market observation.",
+    "source_url": null, "retrieved_at": "2026-10-10T00:00:00Z",
+    "evidence_type": "demo_fixture", "threat_level": "unknown"
+  }
+]

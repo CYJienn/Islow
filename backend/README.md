@@ -1,60 +1,93 @@
 # Kaunter backend
 
-The backend is a FastAPI service for Kaunter. It provides health checks and the local chat/widget generator through a versioned API.
+One Python 3.11 FastAPI server exposes the existing Kaunter routes and the Marketing Agent. Dependencies are declared in `pyproject.toml`, locked in `uv.lock`, and exported with exact versions in the single `requirements.txt`. Both parts read the same `backend/.env`.
 
-Its AI dependency stack includes LangChain for agents and model integrations, LangGraph for multi-agent orchestration, MCP adapters for external tools, and LangSmith support for optional tracing.
+## Setup (Windows PowerShell)
 
-## Requirements
-
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/)
-
-## Setup and run
+Run these commands from the repository root:
 
 ```powershell
-uv sync --dev
-Copy-Item .env.example .env
-uv run python run.py
+cd backend
+uv python install 3.11
+uv sync --dev --python 3.11
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-The application runs through Uvicorn at `http://127.0.0.1:8000`. Development reload is enabled when `ENVIRONMENT=development`.
+Open `backend/.env` and add your keys locally. Keep it out of Git. Marketing reads the existing `OPENAI_API_KEY` setting and uses `LLM_MODEL=gpt-6-luna` by default. `LLM_API_KEY` is still accepted as an optional override for compatibility. Add `TAVILY_API_KEY` for live competitor research. Add `MARKETING_API_TOKEN` only if you want bearer authentication on `POST /marketing/analyze`. The model archive is separate from the API keys.
 
-Useful URLs:
-
-- OpenAPI documentation: `http://127.0.0.1:8000/docs`
-- Alternative API documentation: `http://127.0.0.1:8000/redoc`
-- Health check: `http://127.0.0.1:8000/api/v1/health`
-
-## Tests
+Start the unified server from `backend/`:
 
 ```powershell
-uv run pytest
+uv run --python 3.11 python run.py
 ```
 
-## Dependency files
+The default address is `http://127.0.0.1:8000` (plain HTTP, not HTTPS). In development, `run.py` reloads when code changes. Open `http://127.0.0.1:8000/docs` in a browser to try POST requests with Swagger. Available routes include:
 
-- `pyproject.toml` is the source of truth for direct runtime and development dependencies.
-- `uv.lock` provides reproducible development installs with `uv sync --dev`.
-- `requirements.txt` contains the fully resolved runtime dependency set for environments that use `pip`:
+| Route | Purpose |
+| --- | --- |
+| `GET /api/v1/health` | Existing Kaunter health check |
+| `GET /health` | Marketing Skill health contract |
+| `POST /marketing/analyze` | Marketing analysis contract |
+| `GET /docs` | OpenAPI documentation |
+
+## Demo and API test
+
+In another PowerShell terminal, from `backend/`:
 
 ```powershell
-python -m pip install -r requirements.txt
+uv run --python 3.11 python -m marketing_agent.cli --demo
+Invoke-RestMethod http://127.0.0.1:8000/health
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/marketing/analyze -ContentType application/json -InFile marketing_agent/fixtures/demo_request.json
+uv run --python 3.11 pytest -q
 ```
 
-Set `OPENAI_API_KEY` before invoking an agent. LangSmith tracing is disabled by default and can be enabled through the variables documented in `.env.example`.
+`research_mode: demo` always uses labeled competitor and campaign fixtures, even when API keys are configured, so this test makes no Tavily or OpenAI calls. Without the existing DistilBERT export, review sentiment remains unavailable and the response is `partial` with warnings; it still returns three illustrative ranked campaigns. `research_mode: live` never uses fixtures. The offline tests mock network and model inference.
 
-## Structure
+To exercise Tavily and OpenAI with illustrative input, use `marketing_agent/fixtures/sample_live_request.json`. This makes live API calls and may incur charges:
 
-```text
-app/
-  api/          Versioned routers and HTTP endpoints
-  core/         Settings and shared application configuration
-  schemas/      Pydantic request and response models
-  services/     Business logic independent from HTTP routing
-  main.py       FastAPI application factory
-tests/          Backend tests
-ml/             Model experiments and training notebooks
-run.py          Uvicorn development entrypoint
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/marketing/analyze -ContentType application/json -InFile marketing_agent/fixtures/sample_live_request.json
 ```
 
-Add new HTTP endpoints under `app/api/routes/`, register their router in `app/api/router.py`, and keep reusable logic in `app/services/`.
+Inspect `status`, `warnings`, and `execution` in the response. A successful live run should report `research_engine: tavily_live`, `strategy_engine: configured_llm`, and nonzero `search_calls` and `llm_calls`. It remains `partial` until a local sentiment checkpoint is available. Search results can be empty or uncertain; the agent does not invent competitor facts.
+
+If `MARKETING_API_TOKEN` is set in `.env`, include the bearer token in POST requests. For example, after setting a token in your current shell:
+
+```powershell
+$headers = @{ Authorization = "Bearer $env:MARKETING_API_TOKEN" }
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/marketing/analyze -Headers $headers -ContentType application/json -InFile marketing_agent/fixtures/demo_request.json
+```
+
+The WorkBuddy client defaults to `http://127.0.0.1:8000` and must be able to reach this server. When its files are present, run its `--health` and `--request` commands from the repository root. A remote WorkBuddy runtime needs a reachable HTTPS endpoint and the same bearer token.
+
+## Existing sentiment checkpoint
+
+The notebook exports `growthlab-sentiment-yelp-tuned.zip` and `growthlab-sentiment-amazon-adapted.zip`. Download the Yelp ZIP from your Google Drive to your computer. From `backend/`, assuming the ZIP is in Windows Downloads:
+
+```powershell
+New-Item -ItemType Directory -Force ml/model/growthlab-sentiment-yelp-tuned
+Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\growthlab-sentiment-yelp-tuned.zip" -DestinationPath ml/model/growthlab-sentiment-yelp-tuned -Force
+Test-Path ml/model/growthlab-sentiment-yelp-tuned/config.json
+Test-Path ml/model/growthlab-sentiment-yelp-tuned/model.safetensors
+```
+
+Both checks should print `True`. If the archive uses `pytorch_model.bin` instead, check that file in place of `model.safetensors`. The tokenizer files must also be in the same directory. Restart the backend after extraction, then rerun the demo request; `sentiment.model_status` should become `available` and `execution.sentiment_engine` should be `local_distilbert`. You can point `SENTIMENT_MODEL_PATH` at the extracted Amazon-adapted checkpoint for retail reviews. Weights are not downloaded or retrained automatically. The classifier supports English reviews only.
+
+## Dependency maintenance
+
+For development, use `uv sync --dev --python 3.11`. The single `requirements.txt` includes runtime and test dependencies. For a fresh pip-based environment, from `backend/`:
+
+```powershell
+uv venv --python 3.11 --seed .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+When `pyproject.toml` changes, regenerate the lock and export from `backend/`:
+
+```powershell
+uv lock --python 3.11
+uv export --format requirements-txt --dev --no-hashes --output-file requirements.txt
+```
+
+The marketing pipeline lives in `marketing_agent/`; the existing Kaunter application lives in `app/`. No campaigns are published or funded by this service.
