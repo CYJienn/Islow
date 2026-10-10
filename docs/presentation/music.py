@@ -6,11 +6,11 @@ import numpy as np
 
 SR = 44100
 CUT = sys.argv[1] if len(sys.argv) > 1 else 'a'
-DUR = 61
+DUR = {'c': 33, 'd': 41}.get(CUT, 61)
 N = SR * DUR
 BEAT = 0.5
 mix = np.zeros(N, dtype=np.float32)
-rng = np.random.default_rng(7 if CUT == 'a' else 11)
+rng = np.random.default_rng({'a': 7, 'b': 11, 'c': 23, 'd': 31}[CUT])
 midi = lambda m: 440.0 * 2 ** ((m - 69) / 12)
 
 
@@ -138,11 +138,37 @@ def confetti():
     return out
 
 
-SFX = {'whoosh': lambda: whoosh(0.5), 'whoosh2': lambda: whoosh(0.4, False), 'pop': pop, 'ding': ding, 'hit': hit,
+def ping():
+    n = int(0.16 * SR)
+    t = tt(n)
+    return (np.sin(2 * np.pi * 1760 * t) + 0.4 * np.sin(2 * np.pi * 2640 * t)) * np.exp(-t * 26) * 0.5
+
+
+def spawn():
+    n = int(0.5 * SR)
+    t = tt(n)
+    f = np.where(t < 0.1, 392, np.where(t < 0.2, 523, np.where(t < 0.3, 659, 1046)))
+    return ((((np.cumsum(f) / SR) % 1) < 0.5) * 2.0 - 1.0) * np.exp(-t * 6) * 0.35
+
+
+def zap():
+    n = int(0.45 * SR)
+    t = tt(n)
+    u = t / 0.45
+    return np.sin(2 * np.pi * np.cumsum(300 + 1700 * u ** 2) / SR) * np.sin(np.pi * u) * 0.4
+
+
+def stamp():
+    n = int(0.35 * SR)
+    t = tt(n)
+    return (np.sin(2 * np.pi * np.cumsum(90 + 140 * np.exp(-t * 30)) / SR) * np.exp(-t * 12) + np.diff(rng.standard_normal(n), prepend=0) * np.exp(-t * 60) * 0.5) * 0.9
+
+
+SFX = {'ping': ping, 'spawn': spawn, 'zap': zap, 'stamp': stamp, 'whoosh': lambda: whoosh(0.5), 'whoosh2': lambda: whoosh(0.4, False), 'pop': pop, 'ding': ding, 'hit': hit,
        'scratch': scratch, 'tick': tick, 'confetti': confetti, 'click': lambda: pop(1400, 900) * 0.6}
 
 
-def groove(t0, t1, root, prog, swing=0.0, arp=True, kick_on=True):
+def groove(t0, t1, root, prog, swing=0.0, arp=True, kick_on=True, notes=(0, 7, 12, 15, 12, 7, 3, 7)):
     """Drums + bass + arp between t0 and t1 (seconds). prog = chord roots (midi) per 2 beats."""
     t = t0
     step = 0
@@ -164,7 +190,6 @@ def groove(t0, t1, root, prog, swing=0.0, arp=True, kick_on=True):
         if step % 4 in (0, 3) or (CUT == 'b' and step % 8 == 5):
             put(bass(prog[i2] + (12 if step % 8 == 3 else 0)), tm, 0.55)
         if arp:
-            notes = [0, 7, 12, 15, 12, 7, 3, 7]
             put(lead(prog[i2] + 24 + notes[step % 8]), tm, 0.22)
         step += 1
         t = t0 + step * 0.125 if False else t0 + step * 0.25 * BEAT * 2 / 2
@@ -203,7 +228,58 @@ def compose_b():
     put(ding(), 55.0, 0.8)
 
 
-(compose_a if CUT == 'a' else compose_b)()
+def compose_c():
+    # 0 - 3 s pain: low drone + accelerating heartbeat and clock ticks, riser into the drop, no kick yet
+    n = int(3.0 * SR)
+    t = tt(n)
+    drone = (np.sin(2 * np.pi * 55 * t) + 0.5 * np.sin(2 * np.pi * 58 * t)) * np.minimum(t / 1.0, 1) * 0.22
+    put(drone * np.minimum((3.0 - t) / 0.08, 1), 0, 1.0)
+    tk = 0.0
+    while tk < 2.9:
+        put(tick(), tk, 0.35 + 0.35 * tk / 3)
+        tk += max(0.12, 0.5 * (1 - tk / 3.2))
+    for hb in (0.2, 0.9, 1.5, 2.0, 2.4, 2.7):
+        put(kick(), hb, 0.35)
+    put(riser(1.75), 1.2, 0.7)
+    # 3 s drop: boom, then 4-on-the-floor with bass + arp; fills lead into each section change
+    put(hit(), 3.0, 1.0)
+    groove(3.0, 30.0, 45, [45, 45, 48, 52, 41, 41, 43, 43], arp=True)
+    for fill in (5.5, 17.0, 21.0, 25.0):
+        for i in range(8):
+            put(snare(), fill + 0.5 + i * 0.0625 * 2, 0.25 + 0.05 * i)
+    for tr in (5.5, 17.0, 21.0, 25.0):
+        put(riser(1.0), tr, 0.28)
+    put(hit(), 30.0, 0.9)
+    put(chord([57, 60, 64, 69], 3.0), 30.0, 1.0)
+    put(ding(), 30.9, 0.7)
+
+
+def compose_d():
+    # 0 - 3 s hook: drone + accelerating ticks and heartbeat, riser into the drop (no kick yet)
+    n = int(3.0 * SR)
+    t = tt(n)
+    drone = (np.sin(2 * np.pi * 55 * t) + 0.5 * np.sin(2 * np.pi * 58 * t)) * np.minimum(t / 1.0, 1) * 0.22
+    put(drone * np.minimum((3.0 - t) / 0.08, 1), 0, 1.0)
+    tk = 0.0
+    while tk < 2.9:
+        put(tick(), tk, 0.35 + 0.35 * tk / 3)
+        tk += max(0.12, 0.5 * (1 - tk / 3.2))
+    for hb in (0.2, 0.9, 1.5, 2.0, 2.4, 2.7):
+        put(kick(), hb, 0.35)
+    put(riser(1.75), 1.2, 0.7)
+    # 3 s drop: brighter, major-key groove (4-on-the-floor, bass, arp); a snare fill + riser before each section change
+    put(hit(), 3.0, 1.0)
+    groove(3.0, 39.0, 48, [48, 48, 55, 52, 53, 53, 55, 55], arp=True, notes=(0, 7, 12, 16, 12, 7, 4, 7))
+    for fill in (7.0, 13.0, 25.0, 34.0):
+        for i in range(8):
+            put(snare(), fill + 0.5 + i * 0.0625 * 2, 0.25 + 0.05 * i)
+        put(riser(1.0), fill, 0.28)
+    put(hit(), 35.0, 0.9)
+    put(chord([60, 64, 67, 72], 4.0), 35.0, 1.0)
+    put(ding(), 36.2, 0.6)
+
+
+{'a': compose_a, 'b': compose_b, 'c': compose_c, 'd': compose_d}[CUT]()
 sfx_path = os.path.join(os.path.dirname(__file__), 'out', f'sfx-{CUT}.json')
 if os.path.exists(sfx_path):
     for t, name in json.load(open(sfx_path)):

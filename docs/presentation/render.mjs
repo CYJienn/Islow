@@ -12,16 +12,23 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const cut = process.argv[2] || 'a';
 const FPS = 30;
-const SECS = Number(process.env.SECS || 60);
+const SECS = Number(process.env.SECS || ({ c: 32, d: 40 }[cut] || 60));
 const stills = (process.env.STILLS || '').split(',').filter(Boolean).map(Number);
-const port = 8766 + (cut === 'b' ? 1 : 0);
+const port = 8766 + ({ a: 0, b: 1, c: 2, d: 3 }[cut] ?? 0);
+const APP = process.env.APP_PORT || 3000; // the running Next.js app (cut c embeds it); started with `npm run dev` in web/
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.json': 'application/json', '.png': 'image/png' };
 
 const server = http.createServer((req, res) => {
-  const p = path.join(root, decodeURIComponent(req.url.split('?')[0]));
-  if (!p.startsWith(root) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream' });
-  fs.createReadStream(p).pipe(res);
+  const url = req.url.split('?')[0];
+  const p = path.join(root, decodeURIComponent(url));
+  if ((url.startsWith('/presentation/') || url.startsWith('/frontend/')) && p.startsWith(root) && fs.existsSync(p) && !fs.statSync(p).isDirectory()) {
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(p)] || 'application/octet-stream' });
+    return fs.createReadStream(p).pipe(res);
+  }
+  /* everything else is the live app, proxied so the film page can reach into its iframe (same origin) */
+  const up = http.request({ host: '127.0.0.1', port: APP, path: req.url, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${APP}` } }, (r) => { res.writeHead(r.statusCode, r.headers); r.pipe(res); });
+  up.on('error', () => { res.writeHead(502); res.end(); });
+  req.pipe(up);
 }).listen(port);
 
 const frames = path.join(here, 'frames', cut);
@@ -35,7 +42,7 @@ const page = await ctx.newPage();
 page.on('console', (m) => { if (m.type() === 'error') console.log('[page error]', m.text()); });
 page.on('pageerror', (e) => console.log('[page exception]', e.message));
 await page.clock.install({ time: new Date('2026-10-10T10:24:00+08:00') });
-await page.goto(`http://localhost:${port}/slides/film.html?cut=${cut}`);
+await page.goto(`http://localhost:${port}/presentation/film.html?cut=${cut}`);
 await page.waitForFunction(() => window.READY === true, null, { timeout: 180000 });
 const now = await page.evaluate(() => Date.now());
 await page.clock.pauseAt(new Date(now + 500));

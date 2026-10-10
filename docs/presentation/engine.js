@@ -212,7 +212,7 @@ class App {
         this.w.scrollBy = () => {};
         this.f.contentDocument.fonts.ready.then(() => setTimeout(res, 250));
       };
-      this.f.src = '../frontend/index.html';
+      this.f.src = this.url || '../frontend/index.html';
     });
   }
   doc() { try { return this.f.contentDocument; } catch (e) { return null; } }
