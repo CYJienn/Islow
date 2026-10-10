@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e8ebef">
+  <title>Marketing Lab · Kaunter</title>
+  <link rel="stylesheet" href="/marketing.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Back to Kaunter dashboard">
+        <span class="brand-mark" aria-hidden="true">K<span>.</span></span>
+        <span>Kaunter <small>/ Marketing Lab</small></span>
+      </a>
+      <div class="topbar-actions">
+        <span class="connection" id="connection" role="status" aria-live="polite"><span class="connection-dot"></span> Checking backend</span>
+        <button class="text-button" id="checkHealth" type="button">Check connection</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="pageTitle">
+        <div>
+          <span class="eyebrow">AI WORKBENCH <span class="eyebrow-line"></span> 01 / MARKETING</span>
+          <h1 id="pageTitle">Turn customer reviews into a practical campaign plan.</h1>
+          <p>Enter a business profile and a few English reviews. Run a quick demo, or choose live research to call Tavily and OpenAI.</p>
+        </div>
+        <div class="flow-card" aria-label="Analysis steps">
+          <span>01 <b>Review sentiment</b></span>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <span>02 <b>Competitor research</b></span>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <span>03 <b>Campaign ranking</b></span>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <section class="form-card" aria-labelledby="inputTitle">
+          <div class="section-heading">
+            <div><span class="section-kicker">INPUT</span><h2 id="inputTitle">Your business</h2></div>
+            <button class="subtle-button" id="loadSample" type="button">Load sample</button>
+          </div>
+          <form id="marketingForm">
+            <div class="field-grid">
+              <label class="field field-wide">Business name
+                <input name="name" maxlength="120" required placeholder="e.g. Corner Cafe">
+              </label>
+              <label class="field">Industry
+                <input name="industry" maxlength="80" required placeholder="e.g. cafe">
+              </label>
+              <label class="field">Location
+                <input name="location" maxlength="120" required placeholder="e.g. Subang Jaya, Malaysia">
+              </label>
+              <label class="field field-wide">Products or services <span class="field-hint">Separate with commas</span>
+                <input name="products" required placeholder="coffee, pastries">
+              </label>
+              <label class="field field-wide">Target customers
+                <input name="target_customers" maxlength="200" required placeholder="e.g. students and nearby office workers">
+              </label>
+              <label class="field">Marketing budget <span class="field-hint">RM</span>
+                <input name="marketing_budget_rm" type="number" min="1" step="0.01" required placeholder="500">
+              </label>
+              <label class="field">Channels <span class="field-hint">Comma separated</span>
+                <input name="channels" required placeholder="Instagram, TikTok">
+              </label>
+              <label class="field field-wide">Campaign objective
+                <input name="objective" maxlength="300" required placeholder="e.g. increase weekday visits">
+              </label>
+              <label class="field field-wide">Known competitors <span class="field-hint">Optional, up to 3 names</span>
+                <input name="competitor_names" placeholder="e.g. Cafe A, Cafe B">
+              </label>
+            </div>
+
+            <div class="form-divider"></div>
+            <div class="section-heading compact">
+              <div><span class="section-kicker">CUSTOMER VOICE</span><h2>Reviews</h2></div>
+              <span class="review-count" id="reviewCount">0 reviews</span>
+            </div>
+            <label class="field">One English review per line
+              <textarea name="reviews" rows="5" placeholder="The coffee tastes great and the staff are friendly.&#10;I liked the pastries, but the queue was too long."></textarea>
+            </label>
+            <p class="field-note">Up to 200 reviews. The five-star model reads these reviews; it does not collect reviews from the web.</p>
+
+            <div class="form-divider"></div>
+            <fieldset class="mode-group">
+              <legend>Research mode</legend>
+              <label class="mode-option"><input type="radio" name="research_mode" value="demo" checked><span><b>Demo</b><small>Illustrative competitor and campaign fixtures. No search or LLM call.</small></span></label>
+              <label class="mode-option"><input type="radio" name="research_mode" value="live"><span><b>Live</b><small>Real Tavily search and one OpenAI draft call. Uses API credits.</small></span></label>
+            </fieldset>
+
+            <details class="connection-options">
+              <summary>Connection options</summary>
+              <label class="field">Marketing API token <span class="field-hint">Only if configured on the backend</span>
+                <input name="api_token" type="password" autocomplete="off" placeholder="Bearer token">
+              </label>
+              <p class="field-note">This token stays in this browser tab and is sent only with the analysis request.</p>
+            </details>
+
+            <div class="form-actions">
+              <button class="primary-button" id="runButton" type="submit">Run analysis <span aria-hidden="true">↗</span></button>
+              <button class="subtle-button" id="clearForm" type="button">Clear form</button>
+            </div>
+            <p class="request-message" id="requestMessage" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="output" aria-labelledby="resultTitle">
+          <div class="output-heading">
+            <div><span class="section-kicker">OUTPUT</span><h2 id="resultTitle">Analysis report</h2></div>
+            <span class="report-state" id="reportState">Awaiting request</span>
+          </div>
+          <div id="results" class="results" aria-live="polite">
+            <div class="empty-state">
+              <span class="empty-icon" aria-hidden="true">✦</span>
+              <h3>Your campaign plan will appear here.</h3>
+              <p>Try the sample in demo mode first. Switch to live when you want current search results and AI-generated drafts.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="/marketing.js"></script>
+</body>
+</html>
