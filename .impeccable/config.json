@@ -1,0 +1,68 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "dashboard/style.css"
+        ],
+        "createdAt": "2026-10-09T17:25:28.687Z",
+        "reason": "builder (not user): the only side-tab hit is the .w-resize::after resize-corner glyph, not a card accent border"
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "dashboard/style.css"
+        ],
+        "createdAt": "2026-10-09T17:25:34.873Z",
+        "reason": "builder (not user): both hits are the intentional snap animation of ~9 absolutely positioned widgets and the drop ghost (.w, .ghost); negligible layout cost"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#000",
+        "createdAt": "2026-10-09T18:36:08.284Z",
+        "reason": "Builder-decided: #000 is only an opaque stop in the tray mask-image gradient (alpha mask, never painted)."
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "12px",
+        "createdAt": "2026-10-09T18:36:08.411Z",
+        "reason": "Builder-decided: phone freshness chip, existing before the chat change."
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "11px",
+        "createdAt": "2026-10-09T18:36:08.562Z",
+        "reason": "Builder-decided: touch dock caption, existing before the chat change."
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "14px",
+        "createdAt": "2026-10-09T18:36:08.668Z",
+        "reason": "Builder-decided: phone canvas radius, existing before the chat change."
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "26px",
+        "createdAt": "2026-10-09T18:53:43.569Z",
+        "reason": "Builder-decided: icon glyph size inside the 56px icon-only chat button."
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "20px",
+        "createdAt": "2026-10-09T18:53:43.657Z",
+        "reason": "Builder-decided: phone brand wordmark size, unchanged from the earlier build."
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.34, 1.56, .64, 1)",
+        "createdAt": "2026-10-09T19:29:46.619Z",
+        "reason": "Builder-decided: overshoot easing is the deliberate pop in the hectic showcase films (showcase/engine.js), not product UI."
+      }
+    ]
+  }
+}

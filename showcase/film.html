@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kaunter film</title>
+<link rel="stylesheet" href="film.css">
+</head>
+<body>
+<div id="stage"><div id="bgl"></div><div id="shake"><div id="cam"></div></div><div id="fx"></div></div>
+<script src="engine.js"></script>
+<script>
+  var cut = new URLSearchParams(location.search).get('cut') || 'a';
+  var s = document.createElement('script');
+  s.src = 'cut-' + cut + '.js';
+  document.body.appendChild(s);
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T00:00:00Z",
+  "title": "Design System: Kaunter",
+  "extensions": {
+    "colorMeta": {
+      "ground": { "role": "neutral", "displayName": "Deep Ground", "canonical": "#061744", "tonalRamp": ["#020a22", "#030f33", "#061744", "#0b2468", "#1a3a94", "#4468c2", "#8aa3da", "#dbe5fb"] },
+      "canvas": { "role": "neutral", "displayName": "Canvas Navy", "canonical": "#0a2468", "tonalRamp": ["#030c2e", "#061744", "#0a2468", "#0e2f82", "#1f47ad", "#4f74cc", "#8fa8e0", "#dde6f9"] },
+      "card": { "role": "neutral", "displayName": "Card Blue", "canonical": "#0e2f82", "tonalRamp": ["#041040", "#08205c", "#0e2f82", "#12388f", "#2a56c4", "#5f84d8", "#9fb6e8", "#e0e9fa"] },
+      "ink": { "role": "neutral", "displayName": "Pale Ink", "canonical": "#eaf1ff", "tonalRamp": ["#5d7bc0", "#8aa3da", "#b4c6f1", "#cdd9f6", "#dbe5fb", "#eaf1ff", "#f3f7ff", "#fafcff"] },
+      "green": { "role": "primary", "displayName": "WorkBuddy Green", "canonical": "#28b894", "tonalRamp": ["#04332a", "#07584a", "#009273", "#1da584", "#28b894", "#5cccae", "#9ee0cd", "#e0f6f0"] },
+      "on-green": { "role": "neutral", "displayName": "Night Ink on Green", "canonical": "#04163c", "tonalRamp": ["#010615", "#020d27", "#04163c", "#0a2a6a", "#1d4396", "#4d6fb8", "#93a9d6", "#dae3f3"] },
+      "blue": { "role": "secondary", "displayName": "Tencent Blue", "canonical": "#0052d9", "tonalRamp": ["#001a4d", "#002d85", "#0052d9", "#2a6de0", "#4f8bff", "#7aa6ff", "#b3cdff", "#e6efff"] },
+      "sky": { "role": "secondary", "displayName": "Sky", "canonical": "#8fbaff", "tonalRamp": ["#1a3a73", "#2e5aa8", "#5a8ee0", "#8fbaff", "#a8cbff", "#c3dbff", "#dcebff", "#f0f6ff"] },
+      "alert": { "role": "tertiary", "displayName": "Hornbill Orange", "canonical": "#f2994a", "tonalRamp": ["#4a2506", "#7a3f0d", "#b45f1f", "#f2994a", "#f5ad6b", "#f8c294", "#fbdabf", "#fef0e3"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Greeting", "purpose": "Top-bar greeting, 22px bold." },
+      "title": { "displayName": "Widget Title", "purpose": "Widget and tile titles, 15px bold." },
+      "body": { "displayName": "Body", "purpose": "Default text and list rows, 15px or 14px regular." },
+      "label": { "displayName": "Label", "purpose": "Metadata, chips, pills, 12.5 to 13px." },
+      "clock": { "displayName": "Clock Numeral", "purpose": "Time widget only; scales with container height." }
+    },
+    "shadows": [
+      { "name": "dock-glass", "value": "inset 0 0 0 1px rgba(255,255,255,0.1), inset 0 1px 0 rgba(255,255,255,0.1), 0 22px 44px -20px rgba(0,0,0,0.8); backdrop-filter: blur(20px) saturate(1.6)", "purpose": "Magnifying dock container." },
+      { "name": "tray-glass", "value": "inset 0 0 0 1px rgba(170,198,255,0.4), 0 28px 50px -22px rgba(0,0,0,0.85); backdrop-filter: blur(18px)", "purpose": "Tray and popovers." },
+      { "name": "glass-tile", "value": "inset 0 1px 0 rgba(255,255,255,0.65), inset 0 0 0 1px rgba(255,255,255,0.2), inset 0 -10px 16px -10px rgba(0,0,0,0.4), 0 14px 22px -14px rgba(0,0,0,0.6); backdrop-filter: blur(7px) saturate(1.5)", "purpose": "Tray tiles only." },
+      { "name": "drag-lift", "value": "0 22px 36px -14px rgba(0,0,0,0.7)", "purpose": "A widget mid-drag." },
+      { "name": "drop-pulse", "value": "0 0 0 4px #28b894", "purpose": "A widget just placed." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Single decelerating curve for all motion." },
+      { "name": "snap", "value": "left/top/width/height 0.3s var(--ease)", "purpose": "Widgets glide to lattice cells; disabled while dragging or resizing." },
+      { "name": "rise", "value": "0.6s, 60ms stagger, translate 14px", "purpose": "Widget entry." },
+      { "name": "ghost", "value": "0.12s", "purpose": "Snap rectangle follows the pointer." }
+    ],
+    "breakpoints": [
+      { "name": "grid-4col", "value": "<560px" },
+      { "name": "grid-8col", "value": "<760px" },
+      { "name": "phone", "value": "max-width 720px (dock to bottom bar, rail 0)" },
+      { "name": "tray-column", "value": "min-width 1280px (tray is a side column in edit mode; below it is a bottom strip)" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Widget Card",
+      "kind": "card",
+      "refersTo": "widget-card",
+      "description": "Flat 8px card with module chip header and scrolling body.",
+      "html": "<div class=\"ds-w\"><div class=\"ds-w-head\"><span class=\"ds-w-ic\"></span><span class=\"ds-w-title\">To-do</span></div><div class=\"ds-w-body\">3 open today</div></div>",
+      "css": ".ds-w{display:flex;flex-direction:column;width:260px;background:#0e2f82;border:1px solid rgba(170,198,255,0.2);border-radius:8px;color:#eaf1ff;font:400 15px/1.4 'Atkinson Hyperlegible',system-ui,sans-serif}.ds-w-head{display:flex;align-items:center;gap:10px;padding:10px 10px 6px 12px;min-height:46px}.ds-w-ic{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#4fe0b8,#009273)}.ds-w-title{flex:1;font-weight:700}.ds-w-body{padding:0 14px 12px;color:#b4c6f1}"
+    },
+    {
+      "name": "Mode Chip (edit)",
+      "kind": "chip",
+      "refersTo": "chip-mode-edit",
+      "description": "Top-bar toggle; filled green while editing.",
+      "html": "<button class=\"ds-chip-mode\">Done</button>",
+      "css": ".ds-chip-mode{min-height:34px;padding:6px 12px;border-radius:999px;border:1px solid #28b894;background:#28b894;color:#04163c;font:700 13px 'Atkinson Hyperlegible',system-ui,sans-serif;cursor:pointer}.ds-chip-mode:hover{filter:brightness(1.08)}.ds-chip-mode:focus-visible{outline:2px solid #28b894;outline-offset:3px}"
+    },
+    {
+      "name": "Overdue Pill",
+      "kind": "chip",
+      "refersTo": "pill-late",
+      "description": "The only place orange appears; icon plus word, never colour alone.",
+      "html": "<span class=\"ds-pill-late\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 4l9 16H3z\"/><path d=\"M12 10v4M12 17.2v.1\"/></svg>Overdue</span>",
+      "css": ".ds-pill-late{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;border:1px solid currentColor;color:#f2994a;font:700 12px 'Atkinson Hyperlegible',system-ui,sans-serif;white-space:nowrap}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "refersTo": "segmented-selected",
+      "description": "Two-up language switch in Settings.",
+      "html": "<div class=\"ds-seg\"><button aria-checked=\"true\">English</button><button aria-checked=\"false\">Bahasa Melayu</button></div>",
+      "css": ".ds-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:rgba(255,255,255,0.08)}.ds-seg button{min-height:40px;border:0;border-radius:9px;background:none;color:#b4c6f1;font:700 13.5px 'Atkinson Hyperlegible',system-ui,sans-serif;cursor:pointer}.ds-seg button[aria-checked='true']{background:#28b894;color:#04163c}.ds-seg button:focus-visible{outline:2px solid #28b894;outline-offset:3px}"
+    },
+    {
+      "name": "Checkbox",
+      "kind": "custom",
+      "refersTo": "widget-card",
+      "description": "22px rounded square; green fill when done.",
+      "html": "<button class=\"ds-chk\" aria-checked=\"true\">&#10003;</button>",
+      "css": ".ds-chk{width:22px;height:22px;padding:0;border-radius:6px;border:2px solid #8aa3da;background:transparent;color:#04163c;font-size:13px;cursor:pointer}.ds-chk[aria-checked='true']{background:#28b894;border-color:#28b894}.ds-chk:focus-visible{outline:2px solid #28b894;outline-offset:3px}"
+    },
+    {
+      "name": "Glass Tray Tile",
+      "kind": "custom",
+      "description": "Tilted gradient plate with a frosted glass face; tray only.",
+      "html": "<div class=\"ds-tile\"><span class=\"ds-plate\"></span><span class=\"ds-glass\"></span></div>",
+      "css": ".ds-tile{position:relative;width:64px;height:64px;margin:20px}.ds-plate{position:absolute;inset:0;border-radius:20px;background:linear-gradient(135deg,#4fe0b8,#009273);transform-origin:100% 100%;transform:rotate(28deg);transition:transform .5s cubic-bezier(.22,1,.36,1)}.ds-glass{position:absolute;inset:0;border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.24),rgba(223,223,223,.08));backdrop-filter:blur(7px) saturate(1.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 0 0 1px rgba(255,255,255,.2),0 14px 22px -14px rgba(0,0,0,.6)}.ds-tile:hover .ds-plate{transform:rotate(34deg)}"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Green pill confirmation.",
+      "html": "<div class=\"ds-toast\">Layout saved</div>",
+      "css": ".ds-toast{display:inline-block;padding:10px 18px;border-radius:999px;background:#28b894;color:#04163c;font:700 15px 'Atkinson Hyperlegible',system-ui,sans-serif;text-align:center}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Workbench",
+    "overview": "Kaunter is a bench the owner rearranges, not a report handed to them. A deep Tencent-blue ground carries a dotted canvas; flat 8px cards sit on the dots and snap to them. In view mode the dots recede (30% opacity) and the page reads as today at a glance. In edit mode the dots come up to full strength, cards go dashed-edged, and a glass tray of widget tiles slides in. The shift between the two is the whole interaction.",
+    "keyCharacteristics": [
+      "Blue-on-blue tonal layering: ground, canvas, card step lighter in that order.",
+      "One action colour (WorkBuddy green) and one alarm colour (Hornbill orange, overdue only).",
+      "Flat 8px cards with 1px low-alpha edges; glass and shadows only in dock, tray, popovers.",
+      "A dotted lattice that is the visible grid and the snap target.",
+      "Never colour alone: overdue carries an icon and the word."
+    ],
+    "rules": [
+      { "name": "The Orange Is Overdue Rule", "body": "Hornbill orange appears only on overdue items, and always with the alert icon and the word \"overdue\" (never colour alone). Nothing else, including warnings, may borrow it; use Sky for non-alarm states.", "section": "colors" },
+      { "name": "The Green Means Act Rule", "body": "Green marks what the owner can do or has done now. It never decorates.", "section": "colors" },
+      { "name": "The Module Hue Rule", "body": "Each widget module owns a gradient pair used only on its small header chip and its tray tile. These identify modules; they are not general palette colours.", "section": "colors" },
+      { "name": "The Weight Is The Hierarchy Rule", "body": "Size steps are small (12.5 to 22px, plus the clock); distinction comes from 400 versus 700, never from a second family.", "section": "typography" },
+      { "name": "The Tabular Numbers Rule", "body": "Amounts, times, dates, and chart values use tabular-nums.", "section": "typography" },
+      { "name": "The Flat Cards Rule", "body": "A widget card at rest has no shadow and no blur. Glass and shadow are for the dock, tray, popovers, and transient drag states only.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep widget cards flat: card fill, 1px edge, 8px radius, no shadow at rest.",
+      "Do reserve Hornbill orange (#f2994a) for overdue and pair it with the alert icon and the word.",
+      "Do use WorkBuddy green only for action, selection, \"now\", and done states, with night-ink (#04163c) text on it.",
+      "Do use Atkinson Hyperlegible at 400 and 700 only; build hierarchy with weight.",
+      "Do keep layout on the integer cell lattice (x, y, w, h in cells, 3px inset) so snap and the dotted canvas stay the same grid.",
+      "Do give every new module a gradient pair for its header chip and tray tile, and a 3 by 2 or 3 by 3 minimum size.",
+      "Do keep glass, backdrop blur, and soft shadows to the dock, tray, popovers, and drag states.",
+      "Do honour prefers-reduced-motion and give touch devices visible captions."
+    ],
+    "donts": [
+      "Don't build a white or light KPI-card dashboard; the world is blue-on-blue.",
+      "Don't put shadows, blur, or gradients on widget cards.",
+      "Don't use orange for warnings, emphasis, or decoration; use Sky for non-alarm states.",
+      "Don't convey state with colour alone (overdue, done, placed all carry an icon or text).",
+      "Don't introduce a second typeface or a decorative display face.",
+      "Don't use ink-3 (#8aa3da) for text that must be read; it is for disabled and de-emphasised items."
+    ]
+  }
+}
