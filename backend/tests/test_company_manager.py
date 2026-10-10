@@ -49,7 +49,7 @@ def test_general_request_is_answered_without_specialists(monkeypatch) -> None:
 
 
 def test_each_specialist_is_called_for_mixed_document_request(monkeypatch) -> None:
-    domains = list(company_manager.SPECIALISTS)
+    domains = ["financial_operations", "marketing_competitor", "legal_compliance"]
     model = FakeModel(company_manager.Route(general=True, specialists=domains))
     monkeypatch.setattr(company_manager, "_model", lambda: model)
     request = ChatRequest(
@@ -60,11 +60,107 @@ def test_each_specialist_is_called_for_mixed_document_request(monkeypatch) -> No
     response = asyncio.run(company_manager.respond(request))
 
     assert response.type == "text"
-    assert len(model.calls) == 5  # classify, three specialists, synthesize
-    for domain in domains:
+    assert len(model.calls) == 4  # classify, two Gemini specialists, synthesize
+    for domain in company_manager.SPECIALISTS:
         assert any(company_manager.SPECIALISTS[domain] in system for system, _ in model.calls)
     assert all("Source: Report A" in human for _, human in model.calls)
     assert "Finding from financial_operations [Report A]" in model.calls[-1][1]
+    assert "Unfinished specialist analysis: marketing and competitor" in response.message
+
+
+def test_marketing_missing_fields_are_requested_together(monkeypatch) -> None:
+    model = FakeModel(company_manager.Route(general=False, specialists=["marketing_competitor"]))
+    monkeypatch.setattr(company_manager, "_model", lambda: model)
+    response = asyncio.run(company_manager.respond(ChatRequest(text="Plan a campaign", marketing={"business": {"name": "Cafe"}})))
+    assert response.type == "text"
+    assert "industry" in response.message and "channels" in response.message
+    assert "full business profile" in response.message
+    assert len(model.calls) == 1
+
+
+def test_marketing_report_reaches_mixed_synthesis_with_document_sources(monkeypatch) -> None:
+    from marketing_agent.graph import analyze
+    from marketing_agent.config import get_settings
+
+    model = FakeModel(company_manager.Route(general=True, specialists=["financial_operations", "marketing_competitor"]))
+    monkeypatch.setattr(company_manager, "_model", lambda: model)
+    monkeypatch.setenv("SENTIMENT_MODEL_PATH", "missing-model")
+    get_settings.cache_clear()
+    captured = {}
+
+    async def fake_run(prepared, authorization=None):
+        captured["request"] = prepared
+        return analyze(prepared)
+
+    monkeypatch.setattr(company_manager.marketing_tool, "run", fake_run)
+    request = ChatRequest(text="Review cash and marketing", marketing={"business": {
+        "name": "Cafe", "industry": "cafe", "location": "KL", "products": ["coffee"],
+        "target_customers": "students", "marketing_budget_rm": 500,
+        "objective": "awareness", "channels": ["Instagram"]}, "research_mode": "demo"},
+        documents=[ChatDocument(source="Owner notes", content="Coffee sells well on Fridays")])
+    response = asyncio.run(company_manager.respond(request))
+    assert response.type == "text"
+    assert captured["request"].document_evidence[0].evidence_id == "document-001"
+    assert "Owner notes" in model.calls[-1][1]
+    assert '"status": "partial"' in model.calls[-1][1]
+    assert "Marketing analysis is partial" in response.message
+
+
+def test_chat_marketing_defaults_live_and_preserves_token_boundary(monkeypatch) -> None:
+    from marketing_agent.config import get_settings
+    from marketing_agent.graph import analyze
+
+    model = FakeModel(company_manager.Route(general=False, specialists=["marketing_competitor"]))
+    monkeypatch.setattr(company_manager, "_model", lambda: model)
+    monkeypatch.setenv("MARKETING_API_TOKEN", "test-token")
+    monkeypatch.setenv("TAVILY_API_KEY", "")
+    monkeypatch.setenv("GOOGLE_API_KEY", "")
+    monkeypatch.setenv("SENTIMENT_MODEL_PATH", "missing-model")
+    get_settings.cache_clear()
+
+
+    observed = {}
+
+    def fake_analyze(prepared):
+        observed["mode"] = prepared.research_mode
+        return analyze(prepared)
+
+    monkeypatch.setattr(company_manager.marketing_tool, "analyze", fake_analyze)
+    unauthorized = TestClient(app).post("/api/v1/chat", json={"text": "Plan marketing", "marketing": {"business": {
+        "name": "Cafe", "industry": "cafe", "location": "KL", "products": ["coffee"],
+        "target_customers": "students", "marketing_budget_rm": 500,
+        "objective": "awareness", "channels": ["Instagram"]}}})
+    assert unauthorized.status_code == 401
+    response = TestClient(app).post("/api/v1/chat", headers={"Authorization": "Bearer test-token"}, json={"text": "Plan marketing", "marketing": {"business": {
+        "name": "Cafe", "industry": "cafe", "location": "KL", "products": ["coffee"],
+        "target_customers": "students", "marketing_budget_rm": 500,
+        "objective": "awareness", "channels": ["Instagram"]}}})
+    assert response.status_code == 200
+    assert observed["mode"] == "live"
+    assert '"data_mode": "live"' in model.calls[-1][1]
+    assert '"research_engine": "unavailable"' in model.calls[-1][1]
+    monkeypatch.delenv("MARKETING_API_TOKEN")
+    get_settings.cache_clear()
+
+
+def test_chat_demo_request_runs_growthlab_graph(monkeypatch) -> None:
+    import json
+    from pathlib import Path
+    from marketing_agent.config import get_settings
+
+    fixture = Path(__file__).parents[1] / "marketing_agent" / "fixtures" / "demo_request.json"
+    payload = json.loads(fixture.read_text(encoding="utf-8"))
+    monkeypatch.setattr(company_manager, "_model", lambda: FakeModel(company_manager.Route(general=False, specialists=["marketing_competitor"])))
+    monkeypatch.setenv("SENTIMENT_MODEL_PATH", "missing-model")
+    monkeypatch.setenv("MARKETING_API_TOKEN", "demo-token")
+    get_settings.cache_clear()
+    response = TestClient(app).post("/api/v1/chat", headers={"Authorization": "Bearer demo-token"}, json={"text": "Plan local marketing", "marketing": {
+        "business": payload["business"], "reviews": payload["reviews"], "research_mode": "demo"}})
+    assert response.status_code == 200
+    assert response.json()["type"] == "text"
+    assert "Marketing analysis is partial" in response.json()["message"]
+    monkeypatch.delenv("MARKETING_API_TOKEN")
+    get_settings.cache_clear()
 
 
 def test_failed_specialist_is_reported_as_unfinished(monkeypatch) -> None:

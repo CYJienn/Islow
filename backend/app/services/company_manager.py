@@ -1,6 +1,7 @@
 """Route company requests to domain specialists and combine their answers."""
 
 import asyncio
+import json
 import logging
 from pathlib import Path
 from typing import Literal
@@ -8,10 +9,12 @@ from typing import Literal
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_genai.chat_models import GoogleAPIError, GoogleRateLimitError
+from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
 from app.schemas.chat import ChatRequest, ChatResponse
+from app.services import marketing_tool
 
 Domain = Literal["financial_operations", "marketing_competitor", "legal_compliance"]
 
@@ -22,11 +25,6 @@ SPECIALISTS: dict[Domain, str] = {
         "Separate document-backed findings from assumptions, cite supplied source labels, "
         "and state missing data and uncertainty. Do not invent figures."
     ),
-    "marketing_competitor": (
-        "You are the marketing and competitor analysis specialist. Analyze only the "
-        "marketing and competitor part of the request. Separate sourced findings from "
-        "assumptions, cite supplied source labels, and identify information that needs verification."
-    ),
     "legal_compliance": (
         "You are the legal and compliance specialist. Analyze only the legal and "
         "compliance part of the request. Identify jurisdiction and date dependencies, "
@@ -36,7 +34,6 @@ SPECIALISTS: dict[Domain, str] = {
 }
 ASSIGNMENTS: dict[Domain, str] = {
     "financial_operations": "Analyze cash flow, finances, and operations only. Leave competitor strategy and legal compliance to other specialists.",
-    "marketing_competitor": "Analyze marketing and competitor pricing only. Leave financial health and legal compliance to other specialists.",
     "legal_compliance": "Analyze legal and compliance uncertainty only. Leave financial calculations and competitor strategy to other specialists.",
 }
 
@@ -87,7 +84,7 @@ async def _ask(model: ChatGoogleGenerativeAI, instructions: str, context: str) -
     return answer.text
 
 
-async def respond(request: ChatRequest) -> ChatResponse:
+async def respond(request: ChatRequest, authorization: str | None = None) -> ChatResponse:
     model = _model()
     if model is None:
         return ChatResponse(
@@ -118,6 +115,8 @@ async def respond(request: ChatRequest) -> ChatResponse:
         return ChatResponse(type="error", message="Company manager could not classify this request. Please try again.")
 
     domains = list(dict.fromkeys(route.specialists))
+    if request.marketing is not None and "marketing_competitor" not in domains:
+        domains.append("marketing_competitor")
     if not domains:
         try:
             answer = await _ask(model, manager_rules + "\nAnswer this general request directly.", context)
@@ -128,7 +127,28 @@ async def respond(request: ChatRequest) -> ChatResponse:
     findings = []
     failures = []
     quota_failures = []
+    marketing_partial = None
     for domain in domains:
+        if domain == "marketing_competitor":
+            marketing_request, missing = marketing_tool.prepare(request)
+            if missing:
+                needed = ", ".join(missing)
+                if len(domains) == 1:
+                    return ChatResponse(type="text", message=f"Please send a complete marketing payload in your next request. Missing or invalid business fields: {needed}. Include the full business profile and any reviews; chat does not retain prior input.")
+                failures.append("marketing and competitor (missing or invalid business fields: " + needed + ")")
+                continue
+            try:
+                report = await marketing_tool.run(marketing_request, authorization)
+            except HTTPException:
+                raise
+            except Exception as error:
+                logger.warning("Marketing tool failed: %s", type(error).__name__)
+                failures.append("marketing and competitor")
+                continue
+            findings.append("marketing_competitor GrowthLab structured report:\n" + json.dumps(report.model_dump(mode="json")))
+            if report.status == "partial":
+                marketing_partial = "Marketing analysis is partial: " + "; ".join(report.warnings)
+            continue
         try:
             result = await _ask(
                 model,
@@ -164,6 +184,8 @@ async def respond(request: ChatRequest) -> ChatResponse:
         answer = "Specialist findings (not synthesized):\n\n" + "\n\n".join(findings) + f"\n\nFinal synthesis unavailable: {reason}."
     if failures:
         answer += "\n\nUnfinished specialist analysis: " + ", ".join(failures) + "."
+    if marketing_partial:
+        answer += "\n\n" + marketing_partial
     if quota_failures:
         answer += " Gemini quota was reached for: " + ", ".join(quota_failures) + "."
     return ChatResponse(type="text", message=answer)

@@ -1,0 +1,21 @@
+{
+  "task_id": "live-cafe-sample-001",
+  "business": {
+    "name": "Sample Corner Cafe",
+    "industry": "cafe",
+    "location": "Subang Jaya, Malaysia",
+    "products": ["coffee", "pastries"],
+    "target_customers": "university students and nearby office workers",
+    "marketing_budget_rm": 500,
+    "objective": "increase local awareness and weekday visits",
+    "channels": ["Instagram", "TikTok"],
+    "competitor_names": []
+  },
+  "reviews": [
+    {"text": "The coffee tastes great and the staff are friendly.", "language": "en", "source": "sample_manual"},
+    {"text": "I liked the pastries, but the queue at lunch was too long.", "language": "en", "source": "sample_manual"},
+    {"text": "A convenient place to study, though seating fills up quickly.", "language": "en", "source": "sample_manual"},
+    {"text": "Good value for a quick morning coffee.", "language": "en", "source": "sample_manual"}
+  ],
+  "research_mode": "live"
+}
