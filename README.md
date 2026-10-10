@@ -6,6 +6,7 @@ Kaunter is a lightweight dashboard prototype for Malaysian SME owner-operators. 
 
 ```text
 backend/       FastAPI service, tests, and ML work
+backend/finance/ Invoice assurance service, source inputs, and WorkBuddy expert package
 frontend/      Vite-powered HTML/CSS/JavaScript dashboard
 presentation/ Demo film renderer and assets
 docs/          Product, design, research, and handoff documents
@@ -30,6 +31,8 @@ uv run pytest
 ```
 
 ## Frontend setup
+
+The separate finance dashboard runs on port `8090`. See [backend/finance/README.md](backend/finance/README.md) for manual testing and the imported WorkBuddy expert package.
 
 In a second terminal, start Vite from `frontend/`:
 

@@ -10,6 +10,11 @@ marketing_agent/models/
 backend/ml/model/growthlab-sentiment-yelp-tuned/
 backend/ml/model/growthlab-sentiment-amazon-adapted/
 backend/.local-checks/
+backend/finance/state/
+backend/finance/.env
+backend/finance/local.env
+backend/finance/finance_export.json
+backend/finance/workbuddy/state/
 
 # JavaScript and generated presentation media
 node_modules/

@@ -1,0 +1,177 @@
+{
+  "name": "invoice-assurance",
+  "version": "1.0.0",
+  "description": "Six-member evidence-grounded invoice assurance team with guarded report distribution.",
+  "expertType": "team",
+  "agentName": "invoice-assurance-team-lead",
+  "teamInfo": {
+    "leadAgent": "invoice-assurance-team-lead",
+    "memberAgents": [
+      "invoice-intake-data-quality",
+      "three-way-matching",
+      "fraud-vendor-risk",
+      "accounting-approval-policy",
+      "assurance-reporting"
+    ]
+  },
+  "agents": [
+    "./agents/invoice-assurance-team-lead.md",
+    "./agents/invoice-intake-data-quality.md",
+    "./agents/three-way-matching.md",
+    "./agents/fraud-vendor-risk.md",
+    "./agents/accounting-approval-policy.md",
+    "./agents/assurance-reporting.md"
+  ],
+  "skills": [
+    "./skills/invoice-assurance-orchestration",
+    "./skills/invoice-assurance-intake",
+    "./skills/invoice-assurance-matching",
+    "./skills/invoice-assurance-fraud",
+    "./skills/invoice-assurance-accounting",
+    "./skills/invoice-assurance-assurance"
+  ],
+  "displayName": {
+    "en": "Invoice Assurance",
+    "zh": "发票鉴证专家团"
+  },
+  "profession": {
+    "en": "Invoice Assurance",
+    "zh": "发票鉴证专家团"
+  },
+  "displayDescription": {
+    "en": "Validate invoice evidence, reconcile purchase orders and receipts, investigate suspected risk, and prepare human-approved reports.",
+    "zh": "以六位专家协作核验发票与采购收货证据识别疑似风险汇总可追溯报告严格执行人工审阅与版本分发审批"
+  },
+  "categoryId": "08-FinanceInvestment",
+  "defaultInitPrompt": {
+    "en": "Review one invoice batch, produce a draft dashboard and Excel report, and pause for my exact-version distribution approval.",
+    "zh": "审查一批发票，生成看板与明细报告，等待我批准指定版本后再分发。"
+  },
+  "quickPrompts": [
+    {
+      "en": "Review one invoice batch, produce a draft dashboard and Excel report, and pause for my exact-version distribution approval.",
+      "zh": "审查一批发票，生成看板与明细报告，等待我批准指定版本后再分发。"
+    },
+    {
+      "en": "Run synthetic acceptance cases without notifications or scheduling.",
+      "zh": "执行合成验收案例，不发送通知，不启用调度。"
+    },
+    {
+      "en": "Explain unresolved invoice evidence and validate notification connections without sending.",
+      "zh": "解释未解决的发票证据并验证通知连接，不发送消息。"
+    }
+  ],
+  "plugin": "invoice-assurance",
+  "tags": [
+    {
+      "en": "Invoice Assurance",
+      "zh": "发票鉴证"
+    },
+    {
+      "en": "Evidence-Based Risk",
+      "zh": "证据风控"
+    },
+    {
+      "en": "Human Approval",
+      "zh": "人工审批"
+    }
+  ],
+  "members": [
+    {
+      "id": "invoice-assurance-team-lead",
+      "name": {
+        "en": "Lin",
+        "zh": "林执衡"
+      },
+      "displayName": {
+        "en": "Lin",
+        "zh": "林执衡"
+      },
+      "profession": {
+        "en": "Invoice Assurance Team Lead",
+        "zh": "发票鉴证团队负责人"
+      },
+      "role": "lead"
+    },
+    {
+      "id": "invoice-intake-data-quality",
+      "name": {
+        "en": "Xu",
+        "zh": "许清源"
+      },
+      "displayName": {
+        "en": "Xu",
+        "zh": "许清源"
+      },
+      "profession": {
+        "en": "Invoice Intake and Data Quality Expert",
+        "zh": "发票接收与数据质量专家"
+      },
+      "role": "member"
+    },
+    {
+      "id": "three-way-matching",
+      "name": {
+        "en": "He",
+        "zh": "何对齐"
+      },
+      "displayName": {
+        "en": "He",
+        "zh": "何对齐"
+      },
+      "profession": {
+        "en": "Three-Way Matching Expert",
+        "zh": "三方匹配专家"
+      },
+      "role": "member"
+    },
+    {
+      "id": "fraud-vendor-risk",
+      "name": {
+        "en": "Yan",
+        "zh": "严慎行"
+      },
+      "displayName": {
+        "en": "Yan",
+        "zh": "严慎行"
+      },
+      "profession": {
+        "en": "Fraud and Vendor Risk Expert",
+        "zh": "欺诈与供应商风险专家"
+      },
+      "role": "member"
+    },
+    {
+      "id": "accounting-approval-policy",
+      "name": {
+        "en": "Zhang",
+        "zh": "章守则"
+      },
+      "displayName": {
+        "en": "Zhang",
+        "zh": "章守则"
+      },
+      "profession": {
+        "en": "Accounting and Approval Policy Expert",
+        "zh": "会计与审批政策专家"
+      },
+      "role": "member"
+    },
+    {
+      "id": "assurance-reporting",
+      "name": {
+        "en": "Shen",
+        "zh": "沈复核"
+      },
+      "displayName": {
+        "en": "Shen",
+        "zh": "沈复核"
+      },
+      "profession": {
+        "en": "Assurance and Reporting Expert",
+        "zh": "鉴证与报告专家"
+      },
+      "role": "member"
+    }
+  ]
+}
