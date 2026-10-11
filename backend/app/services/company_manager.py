@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from app.core import usage
 from app.core.config import get_settings
 from app.schemas.chat import ChatRequest, ChatResponse, ChatTurn
-from app.services import financial_tool, marketing_tool
+from app.services import financial_tool, marketing_tool, telegram_alert
 
 Domain = Literal["financial_operations", "marketing_competitor", "legal_compliance", "personal_assistant"]
 
@@ -119,6 +119,9 @@ async def _ask(model: ChatOpenAI, instructions: str, context: str) -> str:
 
 
 async def respond(request: ChatRequest, authorization: str | None = None) -> ChatResponse:
+    telegram_kind = telegram_alert.request_kind(request.text)
+    if telegram_kind:
+        return await telegram_alert.send_alert(telegram_kind)
     model = _model()
     if model is None:
         return ChatResponse(
