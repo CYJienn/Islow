@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kaunter</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══ LOCKED ENGINE SHELL ═══════════════════════════════════════
+   Swappable: the :root tokens, the fonts, and every slide's markup/CSS.
+   Locked: the stage, slide frame, .fx stagger, chrome, ?still mode and
+   the script at the bottom. Everything settles within 1000ms.
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  /* white · light blue · gray, ONE teal accent = "the one thing to look at" */
+  --paper:#FFFFFF; --surface:#F3F7F9; --surface-2:#E4F1F9;
+  --line:#E1E8ED; --line-strong:#C5D3DC;
+  --ink:#263238; --ink-2:#455A64; --ink-3:#5F7886; --ink-4:#6B8794;
+  --accent:#0B8F8A; --blue:#EAF4FB; --blue-line:#B9D8EA;
+  --sans:Inter,system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--paper);overflow:hidden}
+body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#fit{position:fixed;inset:0;display:grid;place-items:center}
+#stage{width:1280px;height:720px;position:relative;background:var(--paper);overflow:hidden}
+
+/* type */
+.eyebrow,.mark{font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-4)}
+.eyebrow b{color:var(--accent)}
+.mark .isl{color:#001C55}
+.head{font-size:54px;line-height:1.04;font-weight:600;letter-spacing:-.028em}
+.head em{font-style:normal;color:var(--ink-4)}
+.kicker{font-size:16px;line-height:1.5;color:var(--ink-3)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.05em;line-height:.85}
+
+/* slide frame: eyebrow + headline land on the same pixel on every slide */
+.slide{position:absolute;inset:0;padding:54px 72px 76px;display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;transition:opacity .26s var(--ease),visibility .26s}
+.slide.on{opacity:1;visibility:visible}
+.slide:has(.head){justify-content:center;padding-top:196px}
+.slide:has(.head) > .eyebrow{position:absolute;top:54px;left:72px}
+.slide:has(.head) > .mark{position:absolute;top:54px;right:72px}
+.slide:has(.head) > .head{position:absolute;top:92px;left:72px;right:72px}
+
+/* entrance stagger along the reading path: set --i in reading order */
+.fx{opacity:0;transform:translateY(12px);transition:opacity .3s var(--ease),transform .3s var(--ease)}
+.fx.x{transform:translateX(-24px)}
+.fx.g{transform:scaleX(0);transform-origin:left center;transition:transform .5s var(--ease),opacity .25s}
+.slide.on .fx{opacity:1;transform:none;transition-delay:calc(var(--i,0)*55ms + 50ms)}
+
+/* chrome */
+#foot{position:absolute;left:72px;right:72px;bottom:26px;display:flex;justify-content:space-between;
+  font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-4)}
+#foot .r{font-family:var(--mono);letter-spacing:.06em}
+#bar{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--line)}
+#bar i{display:block;height:100%;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+
+.flow svg > *{transition:opacity .45s var(--ease)}
+
+/* static export (?still) and reduced motion show final states */
+.still .fx{opacity:1!important;transform:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){.fx{transition:none!important}}
+
+/* ═══ SLIDES ═══ */
+
+/* 1 · full-screen film */
+.film{padding:0;background:#000}
+.film video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.film .hint{transition:opacity .6s;position:absolute;right:20px;bottom:16px;font:600 11px var(--mono);letter-spacing:.06em;color:#fff;background:rgba(0,0,0,.45);padding:6px 10px;border-radius:999px;opacity:.85}
+body.onfilm #foot,body.onfilm #bar{display:none}
+
+
+/* 2 · the problem */
+.prob{display:flex;align-items:center;gap:56px}
+.prob .big{font-size:190px;color:var(--accent);width:190px;flex:none}
+.prob .cards{display:flex;gap:18px;flex:1}
+.card{flex:1;background:var(--surface);border-radius:20px;padding:28px 24px 30px}
+.card svg{width:30px;height:30px;stroke:var(--ink-2);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.card h3{font-size:22px;font-weight:600;margin:18px 0 8px;letter-spacing:-.01em}
+.card p{font-size:15px;line-height:1.5;color:var(--ink-3)}
+
+/* 3 + 6 · screenshot / video frame */
+.row{display:flex;align-items:center;gap:56px}
+.shot{width:672px;flex:none;border:1px solid var(--line-strong);border-radius:16px;overflow:hidden;background:#fff;
+  box-shadow:0 22px 44px -26px rgba(38,50,56,.4)}
+.shot .tb{height:26px;background:var(--surface);display:flex;align-items:center;gap:6px;padding:0 12px;border-bottom:1px solid var(--line)}
+.shot .tb i{width:8px;height:8px;border-radius:50%;background:#CFD8DC}
+.shot .tb span{margin-left:10px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.shot img,.shot video{display:block;width:100%;height:auto}
+.steps{flex:1;list-style:none;display:flex;flex-direction:column;gap:26px}
+.steps li{display:flex;gap:16px;align-items:baseline}
+.steps .n{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink-4);flex:none;width:24px}
+.steps .n.a{color:var(--accent)}
+.steps b{display:block;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.steps small{display:block;margin-top:4px;font-size:14.5px;line-height:1.45;color:var(--ink-3)}
+
+/* 4 + 5 · flows */
+.flow svg{transition:transform .6s var(--ease)}
+.flow{width:1136px}
+.flow svg{display:block;overflow:visible}
+.flow text{font-family:var(--sans)}
+.note{margin-top:18px;font-size:14px;line-height:1.5;color:var(--ink-3)}
+.note b{color:var(--ink-2);font-weight:600}
+.mono{font-family:var(--mono);font-size:13px;color:var(--ink-3);margin-top:18px}
+
+/* 5 · WorkBuddy, step by step */
+.wb{width:1136px}
+.wb .band{display:flex;align-items:center;justify-content:space-between;background:var(--accent);color:#fff;border-radius:18px;padding:0 28px;height:64px}
+.wb .band b{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.wb .band span{font-size:15px;opacity:.95}
+.wb .cols{display:flex;align-items:stretch;gap:14px;margin-top:22px}
+.wb .col{flex:1;background:var(--surface);border-radius:20px;padding:22px 20px 24px}
+.wb .col .n{font:600 12px var(--mono);color:var(--ink-4)}
+.wb .col h3{font-size:19px;font-weight:600;letter-spacing:-.01em;margin:8px 0 8px}
+.wb .col p{font-size:14.5px;line-height:1.45;color:var(--ink-3)}
+.wb .col ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:2px}
+.wb .col li{background:var(--blue);border:1px solid var(--blue-line);border-radius:12px;padding:9px 12px;font-size:14px;font-weight:500;color:var(--ink)}
+.wb .arr{align-self:center;flex:none;width:14px;height:14px;stroke:#90A4AE;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* 6 · url pill */
+.pill{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:14px;font-weight:600;color:#fff;background:var(--accent);padding:10px 16px;border-radius:999px}
+</style>
+</head>
+<body>
+<div id="fit"><div id="stage">
+
+<!-- 1 · FILM: owners are alone with too many jobs; Kaunter is their AI team -->
+<section class="slide film" data-t="Kaunter film">
+  <video id="film" muted playsinline preload="auto" poster="shots/kaunter-d-poster.jpg" src="shots/kaunter-d.mp4"></video>
+  <span class="hint fx" style="--i:6">M sound · F full screen</span>
+</section>
+
+<!-- 2 · WHY: small business owners do three jobs alone -->
+<section class="slide" data-t="The problem">
+  <p class="eyebrow fx" style="--i:0"><b>02</b> · Why</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">Owners do three jobs <em>alone.</em></h2>
+  <div class="prob">
+    <div class="num big fx" style="--i:2" data-count="3">0</div>
+    <div class="cards">
+      <div class="card fx" style="--i:3">
+        <svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-7M22 20H2"/></svg>
+        <h3>Marketing</h3><p>No agency to read reviews or watch rivals.</p>
+      </div>
+      <div class="card fx" style="--i:4">
+        <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg>
+        <h3>Invoices</h3><p>No clerk to catch a duplicate or a swapped bank account.</p>
+      </div>
+      <div class="card fx" style="--i:5">
+        <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>
+        <h3>Contracts</h3><p>No lawyer to flag a 90-day payment clause.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · WHAT: ask once, a manager routes to AI specialists, one dashboard -->
+<section class="slide" data-t="What we built">
+  <p class="eyebrow fx" style="--i:0"><b>03</b> · What</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">Ask once. <em>A team answers.</em></h2>
+  <div class="row">
+    <ol class="steps" style="flex:1">
+      <li class="fx x" style="--i:2"><span class="n">01</span><div><b>Manager routes it</b><small>Picks the right specialist and merges the answers.</small></div></li>
+      <li class="fx x" style="--i:3"><span class="n">02</span><div><b>Specialists do the work</b><small>Marketing, Finance, Legal and a Personal Assistant.</small></div></li>
+      <li class="fx x" style="--i:4"><span class="n a">03</span><div><b>Owner decides</b><small>Nothing goes out without a yes.</small></div></li>
+    </ol>
+    <div class="shot fx" style="--i:5"><div class="tb"><i></i><i></i><i></i><span>agentsdiscusstors.vercel.app</span></div><img src="shots/dashboard.jpg" alt="Kaunter dashboard"></div>
+  </div>
+</section>
+
+<!-- 4 · HOW: one manager, three kinds of AI -->
+<section class="slide" data-t="Tech flow" data-steps="3">
+  <p class="eyebrow fx" style="--i:0"><b>04</b> · How</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">One manager, <em>three kinds of AI.</em></h2>
+  <div class="flow">
+    <svg viewBox="0 -44 1136 374" width="1136" height="374" role="img" aria-label="Owner asks the Manager, which runs Marketing, Finance and Legal specialists in parallel and returns one merged answer for the owner to approve">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L9 5L0 9z" fill="#90A4AE"/></marker></defs>
+      <g class="fx" data-stage="0" style="--i:2">
+        <rect x="0" y="95" width="150" height="100" rx="16" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="75" y="139" text-anchor="middle" font-size="20" font-weight="600" fill="#263238">Owner</text>
+        <text x="75" y="164" text-anchor="middle" font-size="14" fill="#5F7886">asks one question</text>
+        <line x1="154" y1="145" x2="226" y2="145" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah)"/>
+      </g>
+      <g class="fx" data-stage="0" style="--i:3">
+        <rect x="230" y="70" width="220" height="150" rx="18" fill="#0B8F8A"/>
+        <text x="340" y="134" text-anchor="middle" font-size="26" font-weight="600" fill="#fff">Manager</text>
+        <text x="340" y="164" text-anchor="middle" font-size="14" fill="#fff" fill-opacity=".9">WorkBuddy skill</text>
+        <text x="340" y="185" text-anchor="middle" font-size="14" fill="#fff" fill-opacity=".9">routes · merges · logs</text>
+      </g>
+      <g class="fx" data-stage="1" style="--i:4" fill="none" stroke="#90A4AE" stroke-width="2">
+        <path d="M454 145 C500 145 496 42 536 42" marker-end="url(#ah)"/>
+        <path d="M454 145 L536 146" marker-end="url(#ah)"/>
+        <path d="M454 145 C500 145 496 250 536 250" marker-end="url(#ah)"/>
+      </g>
+      <g class="fx" data-stage="1" style="--i:5">
+        <rect x="540" y="0" width="320" height="84" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/>
+        <text x="562" y="34" font-size="19" font-weight="600" fill="#263238">Marketing</text>
+        <text x="562" y="60" font-size="14" fill="#455A64">Trained ML model · live web search</text>
+        <rect x="540" y="104" width="320" height="84" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/>
+        <text x="562" y="138" font-size="19" font-weight="600" fill="#263238">Finance</text>
+        <text x="562" y="164" font-size="14" fill="#455A64">Fraud rules + AI risk review</text>
+        <rect x="540" y="208" width="320" height="84" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/>
+        <text x="562" y="242" font-size="19" font-weight="600" fill="#263238">Legal</text>
+        <text x="562" y="268" font-size="14" fill="#455A64">Law search (RAG) over 8 Malaysian Acts</text>
+      </g>
+      <g class="fx" data-stage="2" style="--i:6" fill="none" stroke="#90A4AE" stroke-width="2">
+        <path d="M864 42 C900 42 900 142 936 144" marker-end="url(#ah)"/>
+        <path d="M864 146 L936 146" marker-end="url(#ah)"/>
+        <path d="M864 250 C900 250 900 150 936 148" marker-end="url(#ah)"/>
+      </g>
+      <g class="fx" data-stage="2" style="--i:7">
+        <rect x="940" y="70" width="196" height="150" rx="18" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="1038" y="128" text-anchor="middle" font-size="22" font-weight="600" fill="#263238">One answer</text>
+        <text x="1038" y="158" text-anchor="middle" font-size="14" fill="#5F7886">merged and cited</text>
+        <text x="1038" y="179" text-anchor="middle" font-size="14" fill="#5F7886">owner approves</text>
+      </g>
+      <g font-size="13" font-weight="700" letter-spacing="2.4" fill="#263238">
+        <g class="fx" data-stage="0" style="--i:2"><text x="0" y="-16">1 · UNDERSTAND THE GOAL</text><line x1="0" y1="-4" x2="450" y2="-4" stroke="#C5D3DC" stroke-width="2"/></g>
+        <g class="fx" data-stage="1" style="--i:4"><text x="540" y="-16">2 · PLAN AND RUN IN PARALLEL</text><line x1="540" y1="-4" x2="860" y2="-4" stroke="#C5D3DC" stroke-width="2"/></g>
+        <g class="fx" data-stage="2" style="--i:6"><text x="1136" y="-16" text-anchor="end">3 · CHECK, MERGE, APPROVE</text><line x1="936" y1="-4" x2="1136" y2="-4" stroke="#C5D3DC" stroke-width="2"/></g>
+      </g>
+    </svg>
+    <p class="mono fx" style="--i:9">Next.js · FastAPI · LangChain · LangGraph · WorkBuddy</p>
+  </div>
+</section>
+
+<!-- 5 · WHY DIFFERENT: each agent has a real engine inside (ML model, fraud rules, RAG), not just a prompt -->
+<section class="slide" data-t="Why it is different">
+  <p class="eyebrow fx" style="--i:0"><b>05</b> · Why it is different</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">Not just prompts. <em>Real engines.</em></h2>
+  <div class="flow">
+    <svg viewBox="0 0 1136 352" width="1136" height="352" role="img" aria-label="Marketing runs a trained machine-learning model, Finance runs fraud-detection rules, Legal runs retrieval over Malaysian law; each returns a checkable result">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L9 5L0 9z" fill="#90A4AE"/></marker></defs>
+      <g class="fx" style="--i:2">
+        <rect x="0" y="0" width="150" height="96" rx="16" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="75" y="42" text-anchor="middle" font-size="20" font-weight="600" fill="#263238">Marketing</text>
+        <text x="75" y="66" text-anchor="middle" font-size="13" fill="#5F7886">customer reviews</text>
+        <line x1="154" y1="48" x2="226" y2="48" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/>
+      </g>
+      <g class="fx" style="--i:3">
+        <rect x="230" y="0" width="430" height="96" rx="16" fill="#0B8F8A"/>
+        <text x="252" y="34" font-size="20" font-weight="600" fill="#fff">Machine-learning model</text>
+        <text x="252" y="58" font-size="14" fill="#fff" fill-opacity=".92">Learned from real customer reviews,</text>
+        <text x="252" y="78" font-size="14" fill="#fff" fill-opacity=".92">our own trained model, not a prompt</text>
+        <line x1="664" y1="48" x2="706" y2="48" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/>
+      </g>
+      <g class="fx" style="--i:4">
+        <rect x="710" y="0" width="426" height="96" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/>
+        <text x="732" y="42" font-size="19" font-weight="600" fill="#263238">Scores every review 1–5 stars</text>
+        <text x="732" y="68" font-size="14" fill="#455A64">61% right on unseen reviews (guessing: 20%)</text>
+      </g>
+      <g class="fx" style="--i:5">
+        <rect x="0" y="112" width="150" height="96" rx="16" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="75" y="154" text-anchor="middle" font-size="20" font-weight="600" fill="#263238">Finance</text>
+        <text x="75" y="178" text-anchor="middle" font-size="13" fill="#5F7886">supplier invoices</text>
+        <line x1="154" y1="160" x2="226" y2="160" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/>
+      </g>
+      <g class="fx" style="--i:6">
+        <rect x="230" y="112" width="430" height="96" rx="16" fill="#0B8F8A"/>
+        <text x="252" y="146" font-size="20" font-weight="600" fill="#fff">Fraud-detection rules</text>
+        <text x="252" y="170" font-size="14" fill="#fff" fill-opacity=".92">5 checks per invoice: duplicate, blocked vendor,</text>
+        <text x="252" y="190" font-size="14" fill="#fff" fill-opacity=".92">bank account that doesn’t match the record</text>
+        <line x1="664" y1="160" x2="706" y2="160" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/>
+      </g>
+      <g class="fx" style="--i:7">
+        <rect x="710" y="112" width="426" height="96" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/>
+        <text x="732" y="154" font-size="19" font-weight="600" fill="#263238">PASS · FAIL · UNKNOWN</text>
+        <text x="732" y="180" font-size="14" fill="#455A64">Missing evidence is never guessed</text>
+      </g>
+      <g class="fx" style="--i:8">
+        <rect x="0" y="224" width="150" height="96" rx="16" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="75" y="266" text-anchor="middle" font-size="20" font-weight="600" fill="#263238">Legal</text>
+        <text x="75" y="290" text-anchor="middle" font-size="13" fill="#5F7886">legal questions</text>
+        <line x1="154" y1="272" x2="226" y2="272" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/>
+      </g>
+      <g class="fx" style="--i:9">
+        <rect x="230" y="224" width="430" height="96" rx="16" fill="#0B8F8A"/>
+        <text x="252" y="258" font-size="20" font-weight="600" fill="#fff">Law search (RAG)</text>
+        <text x="252" y="282" font-size="14" fill="#fff" fill-opacity=".92">Searches 1,444 sections of 8 Malaysian Acts</text>
+        <text x="252" y="302" font-size="14" fill="#fff" fill-opacity=".92">finds the right one, even by meaning</text>
+        <line x1="664" y1="272" x2="706" y2="272" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/>
+      </g>
+      <g class="fx" style="--i:10">
+        <rect x="710" y="224" width="426" height="96" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/>
+        <text x="732" y="266" font-size="19" font-weight="600" fill="#263238">Cites the exact section</text>
+        <text x="732" y="292" font-size="14" fill="#455A64">e.g. Contracts Act 1950 s.74</text>
+      </g>
+      <g class="fx" style="--i:11" font-size="13" font-weight="600" letter-spacing="2" fill="#455A64">
+        <text x="0" y="346">1 · THE AGENT</text>
+        <text x="230" y="346">2 · THE ENGINE INSIDE</text>
+        <text x="710" y="346">3 · WHAT COMES BACK</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- 6 · WORKBUDDY: WorkBuddy does every step of an invoice check; the owner decides -->
+<section class="slide" data-t="Built with WorkBuddy">
+  <p class="eyebrow fx" style="--i:0"><b>06</b> · WorkBuddy</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">WorkBuddy does the work. <em>Owner decides.</em></h2>
+  <div class="wb">
+    <div class="band fx" style="--i:2"><b>WorkBuddy</b><span>reads the folder · runs the experts · builds the report · sends the alerts</span></div>
+    <div class="cols">
+      <div class="col fx" style="--i:3"><span class="n">01</span><h3>Invoice arrives</h3><p>Dropped in a OneDrive folder. WorkBuddy reads it and cleans the data.</p></div>
+      <svg class="arr fx" style="--i:4" viewBox="0 0 14 14"><path d="M3 1l7 6-7 6"/></svg>
+      <div class="col fx" style="--i:5"><span class="n">02</span><h3>Three experts, at once</h3>
+        <ul><li>Does it match the order?</li><li>Is the bank account suspicious?</li><li>Can this person approve it?</li></ul></div>
+      <svg class="arr fx" style="--i:6" viewBox="0 0 14 14"><path d="M3 1l7 6-7 6"/></svg>
+      <div class="col fx" style="--i:7"><span class="n">03</span><h3>Owner reviews</h3><p>Missing evidence is flagged, never guessed. The owner approves the exact report.</p></div>
+      <svg class="arr fx" style="--i:8" viewBox="0 0 14 14"><path d="M3 1l7 6-7 6"/></svg>
+      <div class="col fx" style="--i:9"><span class="n">04</span><h3>Alerts go out</h3><p>Outlook and Telegram. Approval never triggers a payment.</p></div>
+    </div>
+    <p class="note fx" style="--i:10">Our Manager and Marketing agents also run on WorkBuddy, as reusable skills.</p>
+  </div>
+</section>
+
+<!-- 7 · LIVE: the app runs live; agents discuss a topic at a round table -->
+<section class="slide" data-t="Live demo">
+  <p class="eyebrow fx" style="--i:0"><b>07</b> · Live</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">See the team <em>at work.</em></h2>
+  <div class="row">
+    <div class="fx" style="--i:2">
+      <div class="shot"><div class="tb"><i></i><i></i><i></i><span>round table · 2× speed</span></div>
+        <video muted loop playsinline preload="auto" poster="shots/round-table-poster.jpg" src="shots/round-table-2x.mp4"></video></div>
+    </div>
+    <div style="flex:1">
+      <ol class="steps">
+        <li class="fx x" style="--i:3"><span class="n">01</span><div><b>Pick a topic</b></div></li>
+        <li class="fx x" style="--i:4"><span class="n">02</span><div><b>Seat the team</b></div></li>
+        <li class="fx x" style="--i:5"><span class="n">03</span><div><b>They discuss. You get one answer.</b></div></li>
+      </ol>
+      <p class="fx" style="--i:6;margin-top:34px"><span class="pill">agentsdiscusstors.vercel.app</span></p>
+    </div>
+  </div>
+</section>
+
+</div></div>
+<div id="foot"><span id="ft"></span><span class="r"><b id="fn">1</b> / <span id="fc"></span></span></div>
+<div id="bar"><i id="bi"></i></div>
+
+<script>
+/* videos: the film (slide 1) waits for the first Next press, then plays once with sound; Back restarts it.
+   The demo clip (slide 7) loops. ?still keeps posters. */
+(() => {
+  const still = location.search.includes('still');
+  const film = document.getElementById('film'), demo = document.querySelector('.shot video');
+  const hint = film.parentElement.querySelector('.hint');
+  const on = v => v.closest('.slide').classList.contains('on');
+  let armed = !still && (location.hash === '' || location.hash === '#1');   // film not started yet
+  if (armed) hint.textContent = 'Press Space to start the film';
+  let hush = false; // true once the presenter pressed M
+  const restart = () => { film.currentTime = 0; film.muted = hush;
+    film.play().catch(() => { film.muted = true; film.play().catch(() => {}); }); };
+  const start = () => {
+    armed = false; restart();
+    hint.textContent = 'M sound · F full screen'; setTimeout(() => { hint.style.opacity = 0; }, 6000);
+  };
+  const watch = (v, f) => new MutationObserver(f).observe(v.closest('.slide'), { attributes: true, attributeFilter: ['class'] });
+  watch(film, () => {
+    document.body.classList.toggle('onfilm', on(film));
+    if (still) return;
+    if (!on(film)) film.pause();
+    else if (armed) { film.pause(); film.currentTime = 0; }
+    else restart();
+  });
+  watch(demo, () => { if (still) return; if (on(demo)) { demo.currentTime = 0; demo.play().catch(() => {}); } else demo.pause(); });
+  addEventListener('keydown', e => {
+    if (!still && on(film)) {
+      if (armed && ['ArrowRight', 'ArrowDown', ' ', 'PageDown', 'Enter'].includes(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); return start(); }
+      if (!armed && ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) restart();
+    }
+    if (e.key === 'm' || e.key === 'M') film.muted = hush = !film.muted;
+    if (e.key === 'f' || e.key === 'F') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {});
+  });
+  addEventListener('click', e => {
+    if (still || !on(film)) return;
+    const left = e.clientX < innerWidth * 0.25;
+    if (armed && !left) { e.stopImmediatePropagation(); start(); }
+    else if (!armed && left) restart();
+  });
+  if (armed) document.body.classList.add('onfilm');
+})();
+</script>
+<script>
+/* workflow slide: Next steps through the stages (engine spotlight); the camera drifts to the lit stage */
+(() => {
+  const sl = document.querySelector('.slide[data-steps]'), svg = sl && sl.querySelector('.flow svg');
+  if (!svg) return;
+  const cx = [225, 700, 1038], fit = () => { svg.style.transform = step < 0 ? '' : `translateX(${(568 - cx[step]) * .15}px)`; };
+  new MutationObserver(r => { if (r.some(m => m.target !== svg)) fit(); }).observe(svg, { attributes: true, attributeFilter: ['style'], subtree: true });
+  new MutationObserver(fit).observe(sl, { attributes: true, attributeFilter: ['class'] });
+})();
+</script>
+<script>
+/* LOCKED ENGINE: stage fit, slide switching, .fx stagger, countUp,
+   step-through, keyboard/click nav, ?still export, #N deep links,
+   hidden-tab replay. Do not rewrite; add per-slide setup above it. */
+const stage  = document.getElementById('stage');
+const slides = [...document.querySelectorAll('.slide')];
+const still  = location.search.includes('still');
+const reduce = still || matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (still) document.documentElement.classList.add('still');
+
+const HOLD = reduce ? 0 : 140, COUNT_MS = 620, STAGGER = 35;
+let i = 0, timers = [], step = 0;
+
+const fit = () => { stage.style.transform = `scale(${Math.min(innerWidth / 1280, innerHeight / 720)})`; };
+
+/* the timeout is the guarantee: rAF is throttled in hidden tabs */
+function countUp(el, to, ms = COUNT_MS) {
+  const suffix = el.dataset.suffix || '';
+  const land = () => { el.textContent = to + suffix; };
+  if (reduce) return land();
+  let done = false;
+  const t0 = performance.now();
+  (function tick(t) {
+    if (done) return;
+    const p = Math.min(Math.max((t - t0) / ms, 0), 1);
+    el.textContent = Math.round(to * (1 - (1 - p) ** 3)) + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  })(performance.now());
+  timers.push(setTimeout(() => { done = true; land(); }, ms + 40));
+}
+
+/* spotlight one stage; k = -1 shows all. Elements without data-stage stay lit. */
+function setStep(k) {
+  step = k;
+  const svg = slides[i].querySelector('.flow svg'); if (!svg) return;
+  for (const el of svg.querySelectorAll('[data-stage]'))
+    el.style.opacity = k < 0 || +el.dataset.stage === k ? 1 : .14;
+}
+function go(d, n = i + d) {
+  const max = +slides[i].dataset.steps || 0;
+  if (max && step + d >= -1 && step + d < max) return setStep(step + d);
+  show(n, d);
+}
+
+function show(n, d = 1) {
+  timers.forEach(clearTimeout); timers = [];
+  i = Math.max(0, Math.min(slides.length - 1, n));
+  slides.forEach((s, k) => s.classList.toggle('on', k === i));
+  const cur  = slides[i];
+  const figs = [...cur.querySelectorAll('[data-count]')];
+  if (reduce) {
+    figs.forEach(el => el.textContent = el.dataset.count + (el.dataset.suffix || ''));
+  } else {
+    figs.forEach(el => el.textContent = '0' + (el.dataset.suffix || ''));
+    timers.push(setTimeout(() => figs.forEach((el, k) =>
+      timers.push(setTimeout(() => countUp(el, +el.dataset.count, +el.dataset.ms || COUNT_MS), k * STAGGER))
+    ), HOLD));
+  }
+  if (cur.dataset.steps) setStep(d < 0 ? +cur.dataset.steps - 1 : -1);
+  document.getElementById('ft').textContent = cur.dataset.t;
+  document.getElementById('fn').textContent = i + 1;
+  document.getElementById('bi').style.transform = `scaleX(${(i + 1) / slides.length})`;
+  history.replaceState(null, '', '#' + (i + 1));
+}
+
+document.getElementById('fc').textContent = slides.length;
+addEventListener('resize', fit);
+addEventListener('visibilitychange', () => { if (!document.hidden) show(i, 1); });
+addEventListener('hashchange', () => { const n = (parseInt(location.hash.slice(1)) || 1) - 1; if (n !== i) show(n); });
+addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown',' ','PageDown','Enter'].includes(e.key)) { e.preventDefault(); go(1); }
+  else if (['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); go(-1); }
+  else if (e.key === 'Home') show(0);
+  else if (e.key === 'End') show(slides.length - 1);
+});
+addEventListener('click', e => go(e.clientX < innerWidth * 0.25 ? -1 : 1));
+fit();
+show((parseInt(location.hash.slice(1)) || 1) - 1);
+</script>
+</body>
+</html>

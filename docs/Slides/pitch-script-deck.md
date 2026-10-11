@@ -1,0 +1,22 @@
+# Kaunter: 2-minute pitch script
+
+Deck: `docs/Slides/deck.html` (plain-words version with a progress guide: `docs/Slides/deck-simple.html`, same slide order and keys) (1280x720, keys: Space/Right = next, Left = back, `#N` jumps to slide N). About 300 words at a calm pace. Open the live app in a second tab before you start.
+
+| # | Time | Slide | Say (spoken lines) | Rubric point it earns |
+|---|---|---|---|---|
+| 1 | 0:00-0:12 | Film (full screen; waits on its first frame until your first **Space**, then plays with sound; **Back** restarts it; **M** = mute, **F** = browser full screen) | Let the hook run, then talk over it: "We are [team], and this is Kaunter: a team of AI staff for the small Malaysian business owner." Press Space at ~0:12 to skip ahead. The film is 40 s, so playing it in full uses a third of your 2 minutes. | - |
+| 2 | 0:08-0:22 | Why | "A shop owner does three jobs alone: marketing, the books and legal. No agency to read reviews. No clerk to catch a swapped bank account on an invoice. No lawyer to flag a 90-day payment clause." | 1 Problem relevance |
+| 3 | 0:22-0:36 | What | "So they ask once. A Manager agent picks the right specialist, merges the answers, and everything lands on one dashboard the owner arranges. Nothing goes out without the owner's yes." | 1, 2 |
+| 4 | 0:36-0:56 | How (**Space** lights one stage at a time: 1 ask, 2 experts, 3 approve; a 4th Space moves on) | "The Manager understands the goal and plans. Marketing runs a trained sentiment model and live search. Finance runs fraud rules with six WorkBuddy experts. Legal retrieves from eight Malaysian Acts and cites them. They work in parallel, report back through the Manager, and the owner gets one merged answer." | 2 Agentic, 4 Verification |
+| 5 | 0:56-1:12 | Why it is different | "And these are not just prompts. Marketing runs a model we trained: it scores each review one to five stars, about 61% exact on 2,000 reviews it never saw. Finance runs five fraud checks on every invoice, and unknown stays unknown. Legal searches 1,444 sections of eight Malaysian Acts and cites the exact section. [Simple deck only: point at the dashed loop] The plan is for the team to repeat this every day in a standup." | 2 Agentic, 4 Verification |
+| 6 | 1:12-1:36 | WorkBuddy | "WorkBuddy does the work, step by step. An invoice lands in a OneDrive folder and WorkBuddy reads it. Three experts check it at once: does it match the order, is the bank account suspicious, can this person approve it. Missing evidence is flagged, never guessed. The owner approves the exact report, and only then do alerts go to Outlook and Telegram. Approval never triggers a payment." | 3 WorkBuddy depth, 4 |
+| 7 | 1:36-2:00 | Live | "Here it is live. Pick a topic, seat the team, they discuss, and the owner gets one answer. [Switch to the live tab, run one topic.] It is deployed at agentsdiscusstors.vercel.app. Thank you." | 5 Live execution |
+
+## Say if asked
+- "Is the fraud finding confirmed?" No. Findings are indicators. Missing evidence stays UNKNOWN, and the app says "I can't tell yet" instead of guessing.
+- "Is the data real?" All demo data is synthetic.
+- "What is not live?" The dashboard is not wired to a live WorkBuddy session yet, and scheduled runs and payments are off. See `docs/product/PRODUCT_DESCRIPTION.md` sections 4 and 6.
+- "Is 61% good?" It is exact-star accuracy on 5 classes (guessing gives 20%), tested on 2,000 held-out Yelp reviews (0.6055). Retail variant: 0.5233 on 600 Amazon reviews. English only. Not re-run locally.
+- "How does the legal search work?" BM25 keyword search plus a heuristic rerank. The code can add BAAI/bge-small-en-v1.5 embeddings, but that needs `fastembed`, which is not in `backend/requirements.txt`, so do not claim dense search unless you installed it. `legal_rag/` is also not imported by the backend app yet. 1,444 statute sections (1,555 chunks with playbooks and templates). Information only, statutes still need a lawyer's check.
+- "What are the five fraud checks?" Duplicate vendor reference, vendor master found, vendor blocked or deleted, invoice bank account vs vendor record, independent bank verification. Plus order matching and approver rules.
+- "Does it really run every day?" Not yet. The app shows the daily standup in its calendar and on the round table, but scheduled runs are prepared and switched off (PRODUCT_DESCRIPTION.md sections 4 and 6). That is why the loop on the simple deck is dashed and tagged PLANNED.
