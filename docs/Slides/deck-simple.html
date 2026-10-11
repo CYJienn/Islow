@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kaunter</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══ LOCKED ENGINE SHELL ═══════════════════════════════════════
+   Swappable: the :root tokens, the fonts, and every slide's markup/CSS.
+   Locked: the stage, slide frame, .fx stagger, chrome, ?still mode and
+   the script at the bottom. Everything settles within 1000ms.
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  /* white · light blue · gray, ONE teal accent = "the one thing to look at" */
+  --paper:#FFFFFF; --surface:#F3F7F9; --surface-2:#E4F1F9;
+  --line:#E1E8ED; --line-strong:#C5D3DC;
+  --ink:#263238; --ink-2:#455A64; --ink-3:#5F7886; --ink-4:#6B8794;
+  --accent:#0B8F8A; --blue:#EAF4FB; --blue-line:#B9D8EA;
+  --sans:Inter,system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--paper);overflow:hidden}
+body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+#fit{position:fixed;inset:0;display:grid;place-items:center}
+#stage{width:1280px;height:720px;position:relative;background:var(--paper);overflow:hidden}
+
+/* type */
+.eyebrow,.mark{font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-4)}
+.eyebrow b{color:var(--accent)}
+.mark .isl{color:#001C55}
+.head{font-size:54px;line-height:1.04;font-weight:600;letter-spacing:-.028em}
+.head em{font-style:normal;color:var(--ink-4)}
+.kicker{font-size:16px;line-height:1.5;color:var(--ink-3)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:-.05em;line-height:.85}
+
+/* slide frame: eyebrow + headline land on the same pixel on every slide */
+.slide{position:absolute;inset:0;padding:54px 72px 76px;display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;transition:opacity .26s var(--ease),visibility .26s}
+.slide.on{opacity:1;visibility:visible}
+.slide:has(.head){justify-content:center;padding-top:196px}
+.slide:has(.head) > .eyebrow{position:absolute;top:54px;left:72px}
+.slide:has(.head) > .mark{position:absolute;top:54px;right:72px}
+.slide:has(.head) > .head{position:absolute;top:92px;left:72px;right:72px}
+
+/* entrance stagger along the reading path: set --i in reading order */
+.fx{opacity:0;transform:translateY(12px);transition:opacity .3s var(--ease),transform .3s var(--ease)}
+.fx.x{transform:translateX(-24px)}
+.fx.g{transform:scaleX(0);transform-origin:left center;transition:transform .5s var(--ease),opacity .25s}
+.slide.on .fx{opacity:1;transform:none;transition-delay:calc(var(--i,0)*55ms + 50ms)}
+
+/* chrome */
+#foot{position:absolute;left:72px;right:72px;bottom:26px;display:flex;justify-content:space-between;
+  font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-4)}
+#foot .r{font-family:var(--mono);letter-spacing:.06em}
+#bar{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--line)}
+#bar i{display:block;height:100%;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+
+.flow svg > *{transition:opacity .45s var(--ease)}
+
+/* static export (?still) and reduced motion show final states */
+.still .fx{opacity:1!important;transform:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){.fx{transition:none!important}}
+
+/* ═══ SLIDES ═══ */
+
+/* 1 · full-screen film */
+.film{padding:0;background:#000}
+.film video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.film .hint{transition:opacity .6s;position:absolute;right:20px;bottom:16px;font:600 11px var(--mono);letter-spacing:.06em;color:#fff;background:rgba(0,0,0,.45);padding:6px 10px;border-radius:999px;opacity:.85}
+body.onfilm #foot,body.onfilm #bar{display:none}
+
+
+/* 2 · the problem */
+.prob{display:flex;align-items:center;gap:56px}
+.prob .big{font-size:190px;color:var(--accent);width:190px;flex:none}
+.prob .cards{display:flex;gap:18px;flex:1}
+.card{flex:1;background:var(--surface);border-radius:20px;padding:28px 24px 30px}
+.card svg{width:30px;height:30px;stroke:var(--ink-2);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.card h3{font-size:22px;font-weight:600;margin:18px 0 8px;letter-spacing:-.01em}
+.card p{font-size:15px;line-height:1.5;color:var(--ink-3)}
+
+/* 3 + 6 · screenshot / video frame */
+.row{display:flex;align-items:center;gap:56px}
+.shot{width:672px;flex:none;border:1px solid var(--line-strong);border-radius:16px;overflow:hidden;background:#fff;
+  box-shadow:0 22px 44px -26px rgba(38,50,56,.4)}
+.shot .tb{height:26px;background:var(--surface);display:flex;align-items:center;gap:6px;padding:0 12px;border-bottom:1px solid var(--line)}
+.shot .tb i{width:8px;height:8px;border-radius:50%;background:#CFD8DC}
+.shot .tb span{margin-left:10px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.shot img,.shot video{display:block;width:100%;height:auto}
+.steps{flex:1;list-style:none;display:flex;flex-direction:column;gap:26px}
+.steps li{display:flex;gap:16px;align-items:baseline}
+.steps .n{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink-4);flex:none;width:24px}
+.steps .n.a{color:var(--accent)}
+.steps b{display:block;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.steps small{display:block;margin-top:4px;font-size:14.5px;line-height:1.45;color:var(--ink-3)}
+
+/* 4 + 5 · flows */
+.flow svg{transition:transform .6s var(--ease)}
+.flow{width:1136px}
+.flow svg{display:block;overflow:visible}
+.flow text{font-family:var(--sans)}
+.note{margin-top:18px;font-size:14px;line-height:1.5;color:var(--ink-3)}
+.note b{color:var(--ink-2);font-weight:600}
+.mono{font-family:var(--mono);font-size:13px;color:var(--ink-3);margin-top:18px}
+
+/* 5 · WorkBuddy, step by step */
+.wb{width:1136px}
+.wb .band{display:flex;align-items:center;justify-content:space-between;background:var(--accent);color:#fff;border-radius:18px;padding:0 28px;height:64px}
+.wb .band b{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.wb .band span{font-size:15px;opacity:.95}
+.wb .cols{display:flex;align-items:stretch;gap:14px;margin-top:22px}
+.wb .col{flex:1;background:var(--surface);border-radius:20px;padding:22px 20px 24px}
+.wb .col .n{font:600 12px var(--mono);color:var(--ink-4)}
+.wb .col h3{font-size:19px;font-weight:600;letter-spacing:-.01em;margin:8px 0 8px}
+.wb .col p{font-size:14.5px;line-height:1.45;color:var(--ink-3)}
+.wb .col ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:2px}
+.wb .col li{background:var(--blue);border:1px solid var(--blue-line);border-radius:12px;padding:9px 12px;font-size:14px;font-weight:500;color:var(--ink)}
+.wb .arr{align-self:center;flex:none;width:14px;height:14px;stroke:#90A4AE;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* 6 · url pill */
+.pill{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:14px;font-weight:600;color:#fff;background:var(--accent);padding:10px 16px;border-radius:999px}
+
+/* simple version: bigger cards, step tiles, journey guide */
+.card{padding:30px 26px 32px}
+.card svg{width:44px;height:44px;stroke:var(--accent)}
+.card h3{font-size:24px}
+.card p{font-size:19px;line-height:1.35;color:var(--ink-2)}
+.steps b{font-size:24px}
+.steps small{font-size:17px}
+.steps4{display:flex;align-items:stretch;gap:14px}
+.st{flex:1;background:var(--surface);border-radius:22px;padding:20px 20px 26px;text-align:center;border:2px solid transparent}
+.st.me{background:var(--paper);border-color:var(--line-strong)}
+.st .tag{display:inline-block;font:600 11px var(--mono);letter-spacing:.06em;padding:5px 10px;border-radius:999px;margin-bottom:18px}
+.st .wbt{background:var(--accent);color:#fff}
+.st .you{background:var(--ink-2);color:#fff}
+.st .ci{width:84px;height:84px;margin:0 auto 18px;border-radius:50%;background:var(--blue);display:grid;place-items:center}
+.st .ci svg{width:40px;height:40px;stroke:var(--ink-2);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.st h3{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.st p{margin-top:6px;font-size:16px;color:var(--ink-3)}
+.steps4 .arr{align-self:center;flex:none;width:16px;height:16px;stroke:#90A4AE;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.wb .note{margin-top:28px;font-size:20px;font-weight:500;color:var(--ink-2);text-align:center}
+#ft{display:none}
+#guide{display:flex;gap:6px;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4)}
+#guide span{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;transition:all .3s}
+#guide span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--line-strong)}
+#guide span.on{background:var(--accent);color:#fff}
+#guide span.on::before{background:#fff}
+#guide span.done::before{background:var(--accent)}
+body.onfilm #guide{display:none}
+.pulse{animation:glow 2.4s ease-in-out infinite}
+@keyframes glow{0%,100%{filter:drop-shadow(0 0 1px rgba(211,47,47,.15))}50%{filter:drop-shadow(0 0 1.5px rgba(211,47,47,.9)) drop-shadow(0 0 4px rgba(211,47,47,.4))}}
+.still .pulse{animation:none}
+.loop path{animation:march .7s linear infinite}
+@keyframes march{to{stroke-dashoffset:-13}}
+.still .loop path,body .loop path[data-x]{animation:none}
+@media (prefers-reduced-motion:reduce){.loop path,.pulse{animation:none}}
+</style>
+</head>
+<body>
+<div id="fit"><div id="stage">
+
+<!-- 1 · FILM: owners are alone with too many jobs; Kaunter is their AI team -->
+<section class="slide film" data-t="Kaunter film">
+  <video id="film" muted playsinline preload="auto" poster="shots/kaunter-d-poster.jpg" src="shots/kaunter-d.mp4"></video>
+  <span class="hint fx" style="--i:6">M sound · F full screen</span>
+</section>
+
+<!-- 2 · PROBLEM: owners do three jobs alone -->
+<section class="slide" data-t="The problem">
+  <p class="eyebrow fx" style="--i:0"><b>02</b> · Problem</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">Owners do three jobs <em>alone.</em></h2>
+  <div class="prob">
+    <div class="num big fx" style="--i:2" data-count="3">0</div>
+    <div class="cards">
+      <div class="card fx" style="--i:3"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V4M16 20v-7M22 20H2"/></svg><h3>Marketing</h3><p>What do customers think?</p></div>
+      <div class="card fx" style="--i:4"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg><h3>Invoices</h3><p>Is this bill safe to pay?</p></div>
+      <div class="card fx" style="--i:5"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><h3>Contracts</h3><p>Is this contract fair?</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · SOLUTION: ask once, a team answers -->
+<section class="slide" data-t="What we built">
+  <p class="eyebrow fx" style="--i:0"><b>03</b> · Solution</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">Ask once. <em>A team answers.</em></h2>
+  <div class="row">
+    <ol class="steps" style="flex:1">
+      <li class="fx x" style="--i:2"><span class="n">01</span><div><b>You ask</b><small>One question</small></div></li>
+      <li class="fx x" style="--i:3"><span class="n">02</span><div><b>The team works</b><small>Marketing · Money · Legal</small></div></li>
+      <li class="fx x" style="--i:4"><span class="n a">03</span><div><b>You decide</b><small>Nothing goes out without a yes</small></div></li>
+    </ol>
+    <div class="shot fx" style="--i:5"><div class="tb"><i></i><i></i><i></i><span>agentsdiscusstors.vercel.app</span></div><img src="shots/dashboard.jpg" alt="Kaunter dashboard"></div>
+  </div>
+</section>
+
+<!-- 4 · HOW: one manager, three experts. Next steps through the three stages. -->
+<section class="slide" data-t="How it works" data-steps="3">
+  <p class="eyebrow fx" style="--i:0"><b>04</b> · How it works</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">One manager, <em>three experts.</em></h2>
+  <div class="flow">
+    <svg viewBox="0 -44 1136 374" width="1136" height="374" role="img" aria-label="You ask the Manager, who sends the question to the Marketing, Finance and Legal experts at the same time, then gives you one answer to approve">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L9 5L0 9z" fill="#90A4AE"/></marker></defs>
+      <g font-size="13" font-weight="700" letter-spacing="2.4" fill="#263238">
+        <g class="fx" data-stage="0" style="--i:2"><text x="0" y="-16">1 · ASK</text><line x1="0" y1="-4" x2="450" y2="-4" stroke="#C5D3DC" stroke-width="2"/></g>
+        <g class="fx" data-stage="1" style="--i:4"><text x="540" y="-16">2 · EXPERTS WORK</text><line x1="540" y1="-4" x2="860" y2="-4" stroke="#C5D3DC" stroke-width="2"/></g>
+        <g class="fx" data-stage="2" style="--i:6"><text x="1136" y="-16" text-anchor="end">3 · YOU APPROVE</text><line x1="936" y1="-4" x2="1136" y2="-4" stroke="#C5D3DC" stroke-width="2"/></g>
+      </g>
+      <g class="fx" data-stage="0" style="--i:2"><rect x="0" y="95" width="150" height="100" rx="16" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="75" y="152" text-anchor="middle" font-size="22" font-weight="600" fill="#263238">You ask</text>
+        <line x1="154" y1="145" x2="226" y2="145" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah)"/></g>
+      <g class="fx" data-stage="0" style="--i:3"><rect x="230" y="70" width="220" height="150" rx="18" fill="#0B8F8A"/>
+        <text x="340" y="140" text-anchor="middle" font-size="28" font-weight="600" fill="#fff">Manager</text>
+        <text x="340" y="172" text-anchor="middle" font-size="15" fill="#fff" fill-opacity=".92">picks the experts</text></g>
+      <g class="fx" data-stage="1" style="--i:4" fill="none" stroke="#90A4AE" stroke-width="2">
+        <path d="M454 145 C500 145 496 42 536 42" marker-end="url(#ah)"/><path d="M454 145 L536 146" marker-end="url(#ah)"/><path d="M454 145 C500 145 496 250 536 250" marker-end="url(#ah)"/></g>
+      <g class="fx" data-stage="1" style="--i:5">
+        <rect x="540" y="0" width="320" height="84" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/><g transform="translate(562 26) scale(1.4)" fill="none" stroke="#455A64" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11M10 20V4M16 20v-7M22 20H2"/></g><text x="616" y="37" font-size="20" font-weight="600" fill="#263238">Marketing</text><text x="616" y="62" font-size="15" fill="#455A64">Reads customer reviews</text>
+        <rect x="540" y="104" width="320" height="84" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/><g transform="translate(562 130) scale(1.4)" fill="none" stroke="#455A64" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></g><text x="616" y="141" font-size="20" font-weight="600" fill="#263238">Finance</text><text x="616" y="166" font-size="15" fill="#455A64">Checks bills for fraud</text>
+        <rect x="540" y="208" width="320" height="84" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/><g transform="translate(562 234) scale(1.4)" fill="none" stroke="#455A64" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></g><text x="616" y="245" font-size="20" font-weight="600" fill="#263238">Legal</text><text x="616" y="270" font-size="15" fill="#455A64">Checks the law</text>
+        </g>
+      <g class="fx" data-stage="2" style="--i:6" fill="none" stroke="#90A4AE" stroke-width="2">
+        <path d="M864 42 C900 42 900 142 936 144" marker-end="url(#ah)"/><path d="M864 146 L936 146" marker-end="url(#ah)"/><path d="M864 250 C900 250 900 150 936 148" marker-end="url(#ah)"/></g>
+      <g class="fx" data-stage="2" style="--i:7"><rect x="940" y="70" width="196" height="150" rx="18" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="1038" y="140" text-anchor="middle" font-size="24" font-weight="600" fill="#263238">One answer</text>
+        <text x="1038" y="172" text-anchor="middle" font-size="15" fill="#5F7886">you approve</text></g>
+    </svg>
+  </div>
+</section>
+
+<!-- 5 · DIFFERENT: real tools inside each expert -->
+<section class="slide" data-t="Why it is different">
+  <p class="eyebrow fx" style="--i:0"><b>05</b> · Why it is different</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">Not just a chatbot. <em>Real tools.</em></h2>
+  <div class="flow">
+    <svg viewBox="0 -44 1136 404" width="1136" height="404" role="img" aria-label="Marketing uses a trained AI model, Finance uses fraud rules, Legal searches real Malaysian law; each gives a checkable result, and the loop repeats every day at a planned standup">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L9 5L0 9z" fill="#90A4AE"/></marker><marker id="ah3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L9 5L0 9z" fill="#0B8F8A"/></marker></defs>
+      <g class="fx" style="--i:2" font-size="13" font-weight="700" letter-spacing="2.4" fill="#263238">
+        <text x="0" y="-16">THE EXPERT</text><line x1="0" y1="-4" x2="150" y2="-4" stroke="#C5D3DC" stroke-width="2"/>
+        <text x="230" y="-16">WHAT IS INSIDE</text><line x1="230" y1="-4" x2="660" y2="-4" stroke="#C5D3DC" stroke-width="2"/>
+        <text x="710" y="-16">WHAT YOU GET</text><line x1="710" y1="-4" x2="1136" y2="-4" stroke="#C5D3DC" stroke-width="2"/></g>
+      <g class="fx" style="--i:2"><rect x="0" y="0" width="150" height="88" rx="16" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="75" y="39" text-anchor="middle" font-size="20" font-weight="600" fill="#263238">Marketing</text>
+        <text x="75" y="62" text-anchor="middle" font-size="13" fill="#5F7886">customer reviews</text>
+        <line x1="154" y1="44" x2="226" y2="44" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/></g>
+      <g class="fx" style="--i:3"><rect x="230" y="0" width="430" height="88" rx="16" fill="#0B8F8A"/>
+        <g transform="translate(254 22) scale(1.8)" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.5 2.9 1-6.1L3.1 9.5l6.1-.9z"/></g>
+        <text x="318" y="40" font-size="22" font-weight="600" fill="#fff">DistilBERT classifier</text>
+        <text x="318" y="65" font-size="14" fill="#fff" fill-opacity=".95" style="font-family:var(--mono)">fine-tuned · 5-class</text>
+        <line x1="664" y1="44" x2="706" y2="44" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/></g>
+      <g class="fx" style="--i:4"><rect x="710" y="0" width="426" height="88" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/>
+        <text x="732" y="40" font-size="20" font-weight="600" fill="#263238">Star score per review</text>
+        <text x="732" y="65" font-size="14" fill="#455A64" style="font-family:var(--mono)">61% acc · 2,000 held-out</text></g>
+      <g class="fx" style="--i:5"><rect x="0" y="100" width="150" height="88" rx="16" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="75" y="139" text-anchor="middle" font-size="20" font-weight="600" fill="#263238">Finance</text>
+        <text x="75" y="162" text-anchor="middle" font-size="13" fill="#5F7886">supplier invoices</text>
+        <line x1="154" y1="144" x2="226" y2="144" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/></g>
+      <g class="fx" style="--i:6"><rect x="230" y="100" width="430" height="88" rx="16" fill="#0B8F8A"/>
+        <g transform="translate(254 122) scale(1.8)" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></g>
+        <text x="318" y="140" font-size="22" font-weight="600" fill="#fff">Rule engine</text>
+        <text x="318" y="165" font-size="14" fill="#fff" fill-opacity=".95" style="font-family:var(--mono)">5 fraud checks · 3-way match</text>
+        <line x1="664" y1="144" x2="706" y2="144" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/></g>
+      <g class="fx" style="--i:7"><rect x="710" y="100" width="426" height="88" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/>
+        <text x="732" y="140" font-size="20" font-weight="600" fill="#263238">PASS · FAIL · UNKNOWN</text>
+        <text x="732" y="165" font-size="14" fill="#455A64" style="font-family:var(--mono)">no evidence, no guess</text></g>
+      <g class="fx" style="--i:8"><rect x="0" y="200" width="150" height="88" rx="16" fill="#F3F7F9" stroke="#C5D3DC"/>
+        <text x="75" y="239" text-anchor="middle" font-size="20" font-weight="600" fill="#263238">Legal</text>
+        <text x="75" y="262" text-anchor="middle" font-size="13" fill="#5F7886">contracts and law</text>
+        <line x1="154" y1="244" x2="226" y2="244" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/></g>
+      <g class="fx" style="--i:9"><rect x="230" y="200" width="430" height="88" rx="16" fill="#0B8F8A"/>
+        <g transform="translate(254 222) scale(1.8)" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h13v16H7a2 2 0 0 1-2-2zM5 18a2 2 0 0 1 2-2h11"/></g>
+        <text x="318" y="240" font-size="22" font-weight="600" fill="#fff">RAG retrieval</text>
+        <text x="318" y="265" font-size="14" fill="#fff" fill-opacity=".95" style="font-family:var(--mono)">BM25 + rerank · 1,444 sections</text>
+        <line x1="664" y1="244" x2="706" y2="244" stroke="#90A4AE" stroke-width="2" marker-end="url(#ah2)"/></g>
+      <g class="fx" style="--i:10"><rect x="710" y="200" width="426" height="88" rx="16" fill="#EAF4FB" stroke="#B9D8EA"/>
+        <text x="732" y="240" font-size="20" font-weight="600" fill="#263238">Cited statute section</text>
+        <text x="732" y="265" font-size="14" fill="#455A64" style="font-family:var(--mono)">Contracts Act 1950 s.74</text></g>
+      <g class="fx loop" style="--i:11" fill="none" stroke="#0B8F8A" stroke-width="2.4" stroke-dasharray="7 6">
+        <path d="M1136 44 H1164 V340 H677"/><path d="M1136 144 H1164"/><path d="M1136 244 H1164"/>
+        <path d="M279 340 H-28 V44"/><path d="M-28 44 H-3" marker-end="url(#ah3)"/><path d="M-28 144 H-3" marker-end="url(#ah3)"/><path d="M-28 244 H-3" marker-end="url(#ah3)"/>
+      </g>
+      <g class="fx" style="--i:12">
+        <rect x="279" y="322" width="398" height="36" rx="18" fill="#fff" stroke="#0B8F8A" stroke-width="2.4" stroke-dasharray="7 6"/>
+        <g transform="translate(298 331) scale(.75)" fill="none" stroke="#0B8F8A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g>
+        <text x="328" y="345" font-size="14" fill="#263238" style="font-family:var(--mono)">Whole team · daily · 20:00</text>
+        <text class="pulse" x="566" y="346" font-size="17" font-weight="600" letter-spacing="1.4" fill="#D32F2F" style="font-family:var(--sans)">PLANNED</text>
+      </g>
+    </svg>
+    <p class="mono fx" style="--i:13">LangGraph · LangChain · FastAPI · Tavily search</p>
+  </div>
+</section>
+
+<!-- 6 · WORKBUDDY: WorkBuddy does the steps, the owner decides -->
+<section class="slide" data-t="Built with WorkBuddy">
+  <p class="eyebrow fx" style="--i:0"><b>06</b> · WorkBuddy</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">WorkBuddy does the work. <em>You decide.</em></h2>
+  <div class="wb">
+    <div class="steps4">
+      <div class="st fx" style="--i:3"><span class="tag wbt">WorkBuddy</span><div class="ci"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg></div><h3>Invoice arrives</h3><p>WorkBuddy reads it</p></div>
+      <svg class="arr fx" style="--i:4" viewBox="0 0 14 14"><path d="M3 1l7 6-7 6"/></svg>
+      <div class="st fx" style="--i:5"><span class="tag wbt">WorkBuddy</span><div class="ci"><svg viewBox="0 0 24 24"><path d="M10 17a7 7 0 1 1 0-14 7 7 0 0 1 0 14zM21 21l-5.5-5.5"/></svg></div><h3>Experts check it</h3><p>3 checks at once</p></div>
+      <svg class="arr fx" style="--i:6" viewBox="0 0 14 14"><path d="M3 1l7 6-7 6"/></svg>
+      <div class="st fx me" style="--i:7"><span class="tag you">You</span><div class="ci"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><h3>You approve</h3><p>you see the report</p></div>
+      <svg class="arr fx" style="--i:8" viewBox="0 0 14 14"><path d="M3 1l7 6-7 6"/></svg>
+      <div class="st fx" style="--i:9"><span class="tag wbt">WorkBuddy</span><div class="ci"><svg viewBox="0 0 24 24"><path d="M6 17v-6a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/></svg></div><h3>Alerts go out</h3><p>Outlook · Telegram</p></div>
+      </div>
+    <p class="note fx" style="--i:12">Checking an invoice, start to finish. Approving never pays anything by itself.</p>
+  </div>
+</section>
+
+<!-- 7 · LIVE -->
+<section class="slide" data-t="Live demo">
+  <p class="eyebrow fx" style="--i:0"><b>07</b> · Live</p>
+  <p class="mark fx" style="--i:0">Kaunter · <span class="isl">Islow</span></p>
+  <h2 class="head fx" style="--i:1">See the team <em>at work.</em></h2>
+  <div class="row">
+    <div class="fx" style="--i:2">
+      <div class="shot"><div class="tb"><i></i><i></i><i></i><span>round table · 2× speed</span></div>
+        <video muted loop playsinline preload="auto" poster="shots/round-table-poster.jpg" src="shots/round-table-2x.mp4"></video></div>
+    </div>
+    <div style="flex:1">
+      <ol class="steps">
+        <li class="fx x" style="--i:3"><span class="n">01</span><div><b>Pick a topic</b></div></li>
+        <li class="fx x" style="--i:4"><span class="n">02</span><div><b>Seat the team</b></div></li>
+        <li class="fx x" style="--i:5"><span class="n">03</span><div><b>Get one answer</b></div></li>
+      </ol>
+      <p class="fx" style="--i:6;margin-top:34px"><span class="pill">agentsdiscusstors.vercel.app</span></p>
+    </div>
+  </div>
+</section>
+
+</div></div>
+<div id="foot"><div id="guide"></div><span id="ft"></span><span class="r"><b id="fn">1</b> / <span id="fc"></span></span></div>
+<div id="bar"><i id="bi"></i></div>
+
+<script>
+/* visual guide: where we are in the story (slide 1 is the film) */
+(() => {
+  const names = ['Problem', 'Solution', 'How', 'Different', 'WorkBuddy', 'Live'], g = document.getElementById('guide');
+  g.innerHTML = names.map(n => `<span>${n}</span>`).join('');
+  const sync = () => { const k = (+document.getElementById('fn').textContent) - 2;
+    [...g.children].forEach((c, j) => { c.classList.toggle('on', j === k); c.classList.toggle('done', j < k); }); };
+  new MutationObserver(sync).observe(document.getElementById('fn'), { childList: true });
+})();
+</script>
+<script>
+/* videos: the film (slide 1) waits for the first Next press, then plays once with sound; Back restarts it.
+   The demo clip (slide 7) loops. ?still keeps posters. */
+(() => {
+  const still = location.search.includes('still');
+  const film = document.getElementById('film'), demo = document.querySelector('.shot video');
+  const hint = film.parentElement.querySelector('.hint');
+  const on = v => v.closest('.slide').classList.contains('on');
+  let armed = !still && (location.hash === '' || location.hash === '#1');   // film not started yet
+  if (armed) hint.textContent = 'Press Space to start the film';
+  let hush = false; // true once the presenter pressed M
+  const restart = () => { film.currentTime = 0; film.muted = hush;
+    film.play().catch(() => { film.muted = true; film.play().catch(() => {}); }); };
+  const start = () => {
+    armed = false; restart();
+    hint.textContent = 'M sound · F full screen'; setTimeout(() => { hint.style.opacity = 0; }, 6000);
+  };
+  const watch = (v, f) => new MutationObserver(f).observe(v.closest('.slide'), { attributes: true, attributeFilter: ['class'] });
+  watch(film, () => {
+    document.body.classList.toggle('onfilm', on(film));
+    if (still) return;
+    if (!on(film)) film.pause();
+    else if (armed) { film.pause(); film.currentTime = 0; }
+    else restart();
+  });
+  watch(demo, () => { if (still) return; if (on(demo)) { demo.currentTime = 0; demo.play().catch(() => {}); } else demo.pause(); });
+  addEventListener('keydown', e => {
+    if (!still && on(film)) {
+      if (armed && ['ArrowRight', 'ArrowDown', ' ', 'PageDown', 'Enter'].includes(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); return start(); }
+      if (!armed && ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) restart();
+    }
+    if (e.key === 'm' || e.key === 'M') film.muted = hush = !film.muted;
+    if (e.key === 'f' || e.key === 'F') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {});
+  });
+  addEventListener('click', e => {
+    if (still || !on(film)) return;
+    const left = e.clientX < innerWidth * 0.25;
+    if (armed && !left) { e.stopImmediatePropagation(); start(); }
+    else if (!armed && left) restart();
+  });
+  if (armed) document.body.classList.add('onfilm');
+})();
+</script>
+<script>
+/* workflow slide: Next steps through the stages (engine spotlight); the camera drifts to the lit stage */
+(() => {
+  const sl = document.querySelector('.slide[data-steps]'), svg = sl && sl.querySelector('.flow svg');
+  if (!svg) return;
+  const cx = [225, 700, 1038], fit = () => { svg.style.transform = step < 0 ? '' : `translateX(${(568 - cx[step]) * .15}px)`; };
+  new MutationObserver(r => { if (r.some(m => m.target !== svg)) fit(); }).observe(svg, { attributes: true, attributeFilter: ['style'], subtree: true });
+  new MutationObserver(fit).observe(sl, { attributes: true, attributeFilter: ['class'] });
+})();
+</script>
+<script>
+/* LOCKED ENGINE: stage fit, slide switching, .fx stagger, countUp,
+   step-through, keyboard/click nav, ?still export, #N deep links,
+   hidden-tab replay. Do not rewrite; add per-slide setup above it. */
+const stage  = document.getElementById('stage');
+const slides = [...document.querySelectorAll('.slide')];
+const still  = location.search.includes('still');
+const reduce = still || matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (still) document.documentElement.classList.add('still');
+
+const HOLD = reduce ? 0 : 140, COUNT_MS = 620, STAGGER = 35;
+let i = 0, timers = [], step = 0;
+
+const fit = () => { stage.style.transform = `scale(${Math.min(innerWidth / 1280, innerHeight / 720)})`; };
+
+/* the timeout is the guarantee: rAF is throttled in hidden tabs */
+function countUp(el, to, ms = COUNT_MS) {
+  const suffix = el.dataset.suffix || '';
+  const land = () => { el.textContent = to + suffix; };
+  if (reduce) return land();
+  let done = false;
+  const t0 = performance.now();
+  (function tick(t) {
+    if (done) return;
+    const p = Math.min(Math.max((t - t0) / ms, 0), 1);
+    el.textContent = Math.round(to * (1 - (1 - p) ** 3)) + suffix;
+    if (p < 1) requestAnimationFrame(tick);
+  })(performance.now());
+  timers.push(setTimeout(() => { done = true; land(); }, ms + 40));
+}
+
+/* spotlight one stage; k = -1 shows all. Elements without data-stage stay lit. */
+function setStep(k) {
+  step = k;
+  const svg = slides[i].querySelector('.flow svg'); if (!svg) return;
+  for (const el of svg.querySelectorAll('[data-stage]'))
+    el.style.opacity = k < 0 || +el.dataset.stage === k ? 1 : .14;
+}
+function go(d, n = i + d) {
+  const max = +slides[i].dataset.steps || 0;
+  if (max && step + d >= -1 && step + d < max) return setStep(step + d);
+  show(n, d);
+}
+
+function show(n, d = 1) {
+  timers.forEach(clearTimeout); timers = [];
+  i = Math.max(0, Math.min(slides.length - 1, n));
+  slides.forEach((s, k) => s.classList.toggle('on', k === i));
+  const cur  = slides[i];
+  const figs = [...cur.querySelectorAll('[data-count]')];
+  if (reduce) {
+    figs.forEach(el => el.textContent = el.dataset.count + (el.dataset.suffix || ''));
+  } else {
+    figs.forEach(el => el.textContent = '0' + (el.dataset.suffix || ''));
+    timers.push(setTimeout(() => figs.forEach((el, k) =>
+      timers.push(setTimeout(() => countUp(el, +el.dataset.count, +el.dataset.ms || COUNT_MS), k * STAGGER))
+    ), HOLD));
+  }
+  if (cur.dataset.steps) setStep(d < 0 ? +cur.dataset.steps - 1 : -1);
+  document.getElementById('ft').textContent = cur.dataset.t;
+  document.getElementById('fn').textContent = i + 1;
+  document.getElementById('bi').style.transform = `scaleX(${(i + 1) / slides.length})`;
+  history.replaceState(null, '', '#' + (i + 1));
+}
+
+document.getElementById('fc').textContent = slides.length;
+addEventListener('resize', fit);
+addEventListener('visibilitychange', () => { if (!document.hidden) show(i, 1); });
+addEventListener('hashchange', () => { const n = (parseInt(location.hash.slice(1)) || 1) - 1; if (n !== i) show(n); });
+addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown',' ','PageDown','Enter'].includes(e.key)) { e.preventDefault(); go(1); }
+  else if (['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(e.key)) { e.preventDefault(); go(-1); }
+  else if (e.key === 'Home') show(0);
+  else if (e.key === 'End') show(slides.length - 1);
+});
+addEventListener('click', e => go(e.clientX < innerWidth * 0.25 ? -1 : 1));
+fit();
+show((parseInt(location.hash.slice(1)) || 1) - 1);
+</script>
+</body>
+</html>
